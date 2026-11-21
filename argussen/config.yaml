@@ -1,0 +1,46 @@
+name: ArgusSen
+version: "1.0.0"
+slug: argussen
+description: ArgusSen – NVR for Home Assistant. Records and shows your surveillance cameras (Reolink, ONVIF, RTSP) – live, 24/7 and events with AI
+url: https://github.com/ArgusSen/argussen
+image: ghcr.io/argussen/argussen
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: services
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:cctv
+panel_title: ArgusSen
+homeassistant_api: true
+hassio_api: true
+services:
+  - mqtt:want
+discovery:
+  - argussen
+map:
+  - type: media
+    read_only: false
+  # the Home Assistant integration is put in custom_components/argussen (run.sh)
+  - type: homeassistant_config
+    read_only: false
+backup_exclude:
+  - "*/models/*"
+  - "models/*"
+  - "*/local/*"
+  - "local/*"
+ports:
+  8099/tcp: null
+ports_description:
+  8099/tcp: Direct access to the ArgusSen API (not needed for Home Assistant)
+options:
+  ai: none
+  ai_url: ""
+  ai_model: rf-detr-n
+  mqtt: false
+schema:
+  ai: list(none|external|builtin)
+  ai_url: str?
+  ai_model: list(rf-detr-n|rt-detrv2-s)
+  mqtt: bool

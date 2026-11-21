@@ -1,0 +1,89 @@
+# Dansk
+1|Bruger
+2|genstart: Supervisor svarede %d
+3|genstart: %v
+4|%s skiftede adgangskode i appen (andre enheder logget ud)
+5|Kamera %s (%s, %s) oprettet af %s
+6|Kamera %s rettet af %s
+7|Kamera %s slettet af %s (optagelserne bliver liggende til oprydningen)
+8|Bruger %s oprettet af %s
+9|Bruger %s rettet af %s
+10|Bruger %s slettet af %s
+11|Bruger %s logget ud på alle enheder af %s
+12|Åbnet: %s fra %s (%s)
+13|%s/%s: %d afkodningsfejl på 10 s – genforbinder
+14|%s/%s: %s – prøver igen
+15|%s/main: ingen data i 90 s – genstarter
+16|%s/sub: optagelsen står stille – genstarter
+17|%s/sub: kameraet sender hovedstrømmen på substrømmen (%d MB/min) – genforbinder
+18|%s/sub: ingen billeder i 20 s – genstarter
+19|%s: kører (%dx%d)
+20|Kameraer: %d flyttet fra argus.json til databasen
+21|oprydning: %d hændelser uden sluttid afsluttet
+22|%s: AI-fejl: %v
+23|%s: hændelse %d bekræftet af AI: %s
+24|%s/%s: skifter fra %s til %s (%s)
+25|%s/%s: %s virker igen – skifter tilbage
+26|MQTT: Home Assistant er startet – sender discovery igen
+27|Login afvist for %q fra %s: %v
+28|Login: %s fra %s (%s)
+29|Logud: %s fra %s
+30|indstillinger for %s ændret af %s: følsomhed %d, AI %d %%, objekter %v, rotation %d, før/efter %d/%d s, slukket hjemme %v
+31|kodeskift afvist for %s: %v
+32|Hjemme-tilstand: %s (sat af %s)
+33|Hændelse %d (%s %s) %s af %s
+34|Hændelse %d (%s %s) slettet af %s
+35|klip af hændelse %d fejlede: %v %s
+36|HA: kunne ikke tjekke, om %s er administrator: %v
+37|HA: bruger %s: %v
+38|Ny bruger fra Home Assistant: %s (admin: %v)
+39|Åbnet: %s via Home Assistant
+40|Lager ændret til %s (%s) af %s – ArgusSen genstarter
+41|FEJL: NAS'en (%s) svarer ikke – optager lokalt i %s, til den er tilbage
+42|NAS'en (%s) er tilbage – optager på NAS'en igen og flytter de lokale optagelser over
+43|FEJL: lageret %s er ikke tilgængeligt (netværksdrevet svarer ikke) – optagelse sat på pause
+44|Lageret %s er tilgængeligt igen – optagelse genoptaget
+45|FEJL: lageret %s er ikke tilgængeligt (netværksdrevet er ikke monteret) – venter med at optage
+46|ArgusSen %s startet: %d kameraer, lager %s, web %s
+47|MQTT: forbindelsen tabt: %v (prøver igen)
+48|MQTT: forbundet til %s
+49|oprydning: %d gamle hændelser slettet
+50|Oprydning: %d gamle filer/mapper slettet%s
+51|Oprydning: intet at gøre%s
+52|Lokalt lager: %d filer (%.1f GB) flyttet til NAS%s
+53|Lokalt lager: lidt plads (%.1f GB ledigt) – slettede de ældste %d HD- og %d SD-filer (%.1f GB)
+54|HA: %s er nu administrator
+55|HA: %s er ikke længere administrator
+56|, %s GB ledigt på lokalt lager
+57|, %s GB ledigt på NAS
+58|stopper …
+59|MQTT: gamle Home Assistant-enheder (argus) fjernet
+60|databasen omdøbt til engelske navne
+61|%s/%s: %s
+62|Sprog ændret til %s af %s
+63|Sprog: %s
+64|Sprog ændret til automatisk (%s) af %s
+65|Kamera %s: hvem der må se det, kunne ikke gemmes: %v
+66|%s: hændelse %d startet af bevægelse
+67|Lager %s: lidt plads (%.1f GB ledigt) – slettede de ældste %d HD- og %d SD-filer (%.1f GB)
+68|FEJL: lageret er næsten fuldt, og kun beskyttede optagelser er tilbage – beskyt færre hændelser eller frigør plads
+69|Optagelser beholdes: SD %d dage, HD %d timer, hændelser %d dage (sat af %s)
+70|HA: %s er ikke administrator – ser de kameraer, der er valgt til nye Home Assistant-brugere
+71|Home Assistant: kunne ikke genindlæse Supervisor-integrationen: %v
+72|Home Assistant: opdaterings-entiteten for ArgusSen manglede – Supervisor-integrationen blev genindlæst
+73|Home Assistant-integration: %v
+74|Home Assistant-integration: discovery svarede HTTP %d
+75|ArgusSen-integrationen %s blev installeret i Home Assistant
+v1|beskyttet
+v2|ikke længere beskyttet
+v3|hjemme
+v4|ude
+v5|stoppede
+v6|skifter metode
+v7|har ikke kunnet køre i 5 min
+v8|fejler med det samme
+v9|kameraet lukkede forbindelsen
+v10|kameraet sendte ingen billedstørrelse
+v11|kameraet svarer ikke
+v12|ingen video i substrømmen
+v13|appens indstillinger

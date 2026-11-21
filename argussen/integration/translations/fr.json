@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Serveur ArgusSen",
+        "description": "Pour un ArgusSen fonctionnant sur un serveur séparé. L'app ArgusSen pour Home Assistant se configure toute seule.",
+        "data": {
+          "url": "Adresse",
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe"
+        },
+        "data_description": {
+          "url": "Par exemple http://192.168.1.20:8080",
+          "username": "Un utilisateur ArgusSen (un administrateur pour le mode maison)"
+        }
+      },
+      "hassio_confirm": {
+        "title": "ArgusSen",
+        "description": "Configurer les caméras, événements et enregistrements de l'app ArgusSen dans Home Assistant ?"
+      },
+      "reauth_confirm": {
+        "title": "Se reconnecter à ArgusSen",
+        "description": "ArgusSen n'accepte plus la connexion. Connectez-vous avec un utilisateur ArgusSen.",
+        "data": {
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Nom d'utilisateur ou mot de passe incorrect",
+      "cannot_connect": "ArgusSen ne répond pas à cette adresse"
+    },
+    "abort": {
+      "already_configured": "Cet ArgusSen est déjà configuré",
+      "cannot_connect": "ArgusSen ne répond pas",
+      "reauth_successful": "Reconnecté"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": {
+        "name": "Mouvement"
+      },
+      "connection": {
+        "name": "Connexion"
+      },
+      "person": {
+        "name": "Personne"
+      },
+      "car": {
+        "name": "Voiture"
+      },
+      "van": {
+        "name": "Camionnette"
+      },
+      "bicycle": {
+        "name": "Vélo"
+      },
+      "storage_low": {
+        "name": "Stockage presque plein"
+      }
+    },
+    "switch": {
+      "home_mode": {
+        "name": "Mode maison"
+      }
+    },
+    "event": {
+      "detection": {
+        "name": "Détection",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Personne",
+              "car": "Voiture",
+              "van": "Camionnette",
+              "bicycle": "Vélo",
+              "motion": "Mouvement"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "latest_event": {
+        "name": "Dernier événement"
+      }
+    },
+    "image": {
+      "latest_event_image": {
+        "name": "Image du dernier événement"
+      }
+    }
+  },
+  "exceptions": {
+    "no_server": {
+      "message": "Aucun serveur ArgusSen n'est configuré"
+    }
+  },
+  "services": {
+    "protect_event": {
+      "name": "Protéger l'événement",
+      "description": "Protéger un événement ArgusSen pour qu'il ne soit jamais supprimé, ou retirer la protection.",
+      "fields": {
+        "event_id": {
+          "name": "Événement",
+          "description": "Le numéro de l'événement (event_id du dernier événement ou d'un argussen_event)."
+        },
+        "protect": {
+          "name": "Protéger",
+          "description": "Activé = protéger, désactivé = retirer la protection (administrateurs uniquement)."
+        },
+        "config_entry_id": {
+          "name": "Serveur ArgusSen",
+          "description": "Nécessaire seulement avec plusieurs serveurs ArgusSen."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Vidéo en direct dans Home Assistant",
+        "data": {
+          "stream_quality": "Qualité de la vidéo en direct dans les cartes caméra"
+        },
+        "data_description": {
+          "stream_quality": "La SD est légère (téléphones, données mobiles). La HD est en pleine résolution. ArgusSen propose toujours les deux."
+        }
+      }
+    }
+  },
+  "selector": {
+    "stream_quality": {
+      "options": {
+        "sd": "SD – basse résolution (plus léger)",
+        "hd": "HD – pleine résolution"
+      }
+    }
+  }
+}

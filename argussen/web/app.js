@@ -1,0 +1,1656 @@
+'use strict';
+/* ArgusSen – app. The screens are drawn here; the Android shell (window.ArgusApp) handles updates, fullscreen and keeping the screen awake. */
+
+const NATIVE = window.ArgusApp || null;
+// Default server for the phone app: set by standard.js, which only exists in the Android build (not in the shared code).
+const STD_SERVER = window.ARGUS_STD_SERVER || '';
+const LABELS = ['Person', 'Car', 'Van', 'Bicycle', 'Motion'];
+const DAY_MS = 86400000;
+
+// ---------- storage ----------
+function load(k, std) { try { const v = localStorage.getItem('argus.' + k); return v === null ? std : JSON.parse(v); } catch (e) { return std; } }
+function save(k, v) { try { localStorage.setItem('argus.' + k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
+
+// ---------- language ----------
+// The texts in the code are English and used as keys; the translations are in i18n.js (window.TRANSLATIONS).
+// ArgusSen has one language (set by an administrator under Settings → General; "Automatic" there = Home Assistant's
+// language). Each device can choose its own; "auto" on the device = ArgusSen's language (remembered as serverLanguage),
+// or the phone's/browser's language before the server has answered.
+const LANG_NAMES = { auto: 'Automatic', da: 'Dansk', en: 'English', de: 'Deutsch', fr: 'Français', sv: 'Svenska', nb: 'Norsk', nl: 'Nederlands' };
+function langCode(v) {
+  if (v && v !== 'auto' && LANG_NAMES[v]) return v;
+  const sv = load('serverLanguage', '');
+  if (sv && sv !== 'auto' && LANG_NAMES[sv]) return sv;
+  const k = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase().slice(0, 2);
+  if (k === 'no' || k === 'nn') return 'nb';
+  return k !== 'au' && LANG_NAMES[k] ? k : 'en';
+}
+const LANG = langCode(load('language', 'auto'));
+const LOC = { da: 'da-DK', en: 'en-GB', de: 'de-DE', fr: 'fr-FR', sv: 'sv-SE', nb: 'nb-NO', nl: 'nl-NL' }[LANG];
+document.documentElement.lang = LANG;
+function tr(s, v) {
+  const o = (window.TRANSLATIONS && TRANSLATIONS[LANG] && TRANSLATIONS[LANG][s]) || s;
+  return v ? o.replace(/\{(\w+)\}/g, (_, k) => (v[k] === undefined ? '' : v[k])) : o;
+}
+const labelName = (l) => tr(cap(l));   // AI object (person, car …) in the selected language
+
+// In the browser (PC version on the home network) the server is the address the page came from.
+const WEB = location.protocol === 'http:' || location.protocol === 'https:';
+const S = {
+  // (the page may be under a sub-path, e.g. in Home Assistant's sidebar: /api/hassio_ingress/<key>/)
+  server: WEB ? location.origin + location.pathname.replace(/\/[^/]*$/, '') : load('server', STD_SERVER),
+  token: load('token', ''),
+  user: load('user', null),
+  opt: Object.assign({ boxes: true, liveBoxes: true, mobileSD: true }, load('opt', {})),
+  seen: load('seen', 0),          // highest event id the user has seen
+  lastCam: load('lastCam', ''),
+  cams: [],                       // from /api/cams
+  events: [],                     // latest events
+};
+
+// ---------- helpers ----------
+const $ = (sel, root) => (root || document).querySelector(sel);
+function el(tag, attrs, ...items) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;   // only for fixed icons from here
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const b of items.flat()) if (b !== null && b !== undefined && b !== false) e.append(b.nodeType ? b : document.createTextNode(String(b)));
+  return e;
+}
+const ICON = {
+  back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  eye: '<svg viewBox="0 0 128 128"><path d="M54.50,15.00 Q64.00,5.58 73.50,15.00 Q64.00,24.42 54.50,15.00 Z" fill="#FFFFFF" stroke="none"/><path d="M60.01,15.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M89.15,29.35 Q98.65,19.93 108.15,29.35 Q98.65,38.78 89.15,29.35 Z" fill="#FFFFFF" stroke="none"/><path d="M94.66,29.35 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M103.50,64.00 Q113.00,54.58 122.50,64.00 Q113.00,73.42 103.50,64.00 Z" fill="#FFFFFF" stroke="none"/><path d="M109.01,64.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M89.15,98.65 Q98.65,89.22 108.15,98.65 Q98.65,108.07 89.15,98.65 Z" fill="#FFFFFF" stroke="none"/><path d="M94.66,98.65 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M54.50,113.00 Q64.00,103.58 73.50,113.00 Q64.00,122.42 54.50,113.00 Z" fill="#FFFFFF" stroke="none"/><path d="M60.01,113.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M19.85,98.65 Q29.35,89.22 38.85,98.65 Q29.35,108.07 19.85,98.65 Z" fill="#FFFFFF" stroke="none"/><path d="M25.36,98.65 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M5.50,64.00 Q15.00,54.58 24.50,64.00 Q15.00,73.42 5.50,64.00 Z" fill="#FFFFFF" stroke="none"/><path d="M11.01,64.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M19.85,29.35 Q29.35,19.93 38.85,29.35 Q29.35,38.78 19.85,29.35 Z" fill="#FFFFFF" stroke="none"/><path d="M25.36,29.35 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M30.50,64.00 a33.50,33.50 0 1,0 67.00,0 a33.50,33.50 0 1,0 -67.00,0 Z" fill="#0D3634" stroke="none"/><path d="M64,64 L93.62,73.16 A31,31 0 0,1 69.28,94.55 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L70.87,94.23 A31,31 0 0,1 40.19,83.85 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L41.26,85.07 A31,31 0 0,1 34.90,53.30 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L34.38,54.84 A31,31 0 0,1 58.72,33.45 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L57.13,33.77 A31,31 0 0,1 87.81,44.15 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L86.74,42.93 A31,31 0 0,1 93.10,74.70 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M52.84,64.00 a11.16,11.16 0 1,0 22.32,0 a11.16,11.16 0 1,0 -22.32,0 Z" fill="#0D3634" stroke="none"/><path d="M57.30,64.00 a6.70,6.70 0 1,0 13.39,0 a6.70,6.70 0 1,0 -13.39,0 Z" fill="#0B1514" stroke="none"/><path d="M64.56,60.65 a2.79,2.79 0 1,0 5.58,0 a2.79,2.79 0 1,0 -5.58,0 Z" fill="#FFFFFF" stroke="none"/></svg>',
+  eyeColour: '<svg viewBox="0 0 128 128"><path d="M54.50,15.00 Q64.00,5.58 73.50,15.00 Q64.00,24.42 54.50,15.00 Z" fill="#FFFFFF" stroke="none"/><path d="M60.01,15.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M89.15,29.35 Q98.65,19.93 108.15,29.35 Q98.65,38.78 89.15,29.35 Z" fill="#FFFFFF" stroke="none"/><path d="M94.66,29.35 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M103.50,64.00 Q113.00,54.58 122.50,64.00 Q113.00,73.42 103.50,64.00 Z" fill="#FFFFFF" stroke="none"/><path d="M109.01,64.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M89.15,98.65 Q98.65,89.22 108.15,98.65 Q98.65,108.07 89.15,98.65 Z" fill="#FFFFFF" stroke="none"/><path d="M94.66,98.65 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M54.50,113.00 Q64.00,103.58 73.50,113.00 Q64.00,122.42 54.50,113.00 Z" fill="#FFFFFF" stroke="none"/><path d="M60.01,113.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M19.85,98.65 Q29.35,89.22 38.85,98.65 Q29.35,108.07 19.85,98.65 Z" fill="#FFFFFF" stroke="none"/><path d="M25.36,98.65 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M5.50,64.00 Q15.00,54.58 24.50,64.00 Q15.00,73.42 5.50,64.00 Z" fill="#FFFFFF" stroke="none"/><path d="M11.01,64.00 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M19.85,29.35 Q29.35,19.93 38.85,29.35 Q29.35,38.78 19.85,29.35 Z" fill="#FFFFFF" stroke="none"/><path d="M25.36,29.35 a3.99,3.99 0 1,0 7.98,0 a3.99,3.99 0 1,0 -7.98,0 Z" fill="#0D3634" stroke="none"/><path d="M30.50,64.00 a33.50,33.50 0 1,0 67.00,0 a33.50,33.50 0 1,0 -67.00,0 Z" fill="#0D3634" stroke="none"/><path d="M64,64 L93.62,73.16 A31,31 0 0,1 69.28,94.55 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L70.87,94.23 A31,31 0 0,1 40.19,83.85 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L41.26,85.07 A31,31 0 0,1 34.90,53.30 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L34.38,54.84 A31,31 0 0,1 58.72,33.45 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L57.13,33.77 A31,31 0 0,1 87.81,44.15 Z" fill="#A8EDE4" stroke="#0D3634" stroke-width="1.6"/><path d="M64,64 L86.74,42.93 A31,31 0 0,1 93.10,74.70 Z" fill="#5CC8BB" stroke="#0D3634" stroke-width="1.6"/><path d="M52.84,64.00 a11.16,11.16 0 1,0 22.32,0 a11.16,11.16 0 1,0 -22.32,0 Z" fill="#0D3634" stroke="none"/><path d="M57.30,64.00 a6.70,6.70 0 1,0 13.39,0 a6.70,6.70 0 1,0 -13.39,0 Z" fill="#0B1514" stroke="none"/><path d="M64.56,60.65 a2.79,2.79 0 1,0 5.58,0 a2.79,2.79 0 1,0 -5.58,0 Z" fill="#FFFFFF" stroke="none"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  power: '<svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7a8 8 0 1 0 11.4 0"/></svg>',
+  camera: '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+  full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  back10: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></svg>',
+  forward10: '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v4h-4"/></svg>',
+  previous: '<svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
+  download: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>',
+  flag: '<svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+};
+function iconButton(name, label, onclick, cls) {
+  return el('button', { type: 'button', class: cls || 'iconBtn', 'aria-label': label, onclick, html: ICON[name] });
+}
+const to = (n) => String(n).padStart(2, '0');
+function fmtTime(t, withSec) { const d = new Date(t); return to(d.getHours()) + ':' + to(d.getMinutes()) + (withSec ? ':' + to(d.getSeconds()) : ''); }
+function dayStart(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function dayName(t) {
+  const d0 = dayStart(Date.now()), d = dayStart(t);
+  if (d === d0) return tr('Today');
+  if (d === d0 - DAY_MS) return tr('Yesterday');
+  return new Date(t).toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function ago(t) {
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return tr('just now');
+  if (s < 3600) return tr('{n} min ago', { n: Math.floor(s / 60) });
+  if (s < 6 * 3600) { const h = Math.floor(s / 3600); return tr(h === 1 ? '{n} hour ago' : '{n} hours ago', { n: h }); }
+  return dayName(t).replace(/^./, (c) => c.toUpperCase()) + ' ' + fmtTime(t);
+}
+function duration(ms) {
+  const s = Math.max(1, Math.round(ms / 1000));
+  return s < 60 ? s + ' s' : Math.floor(s / 60) + 'm' + to(s % 60) + 's';
+}
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+function eventLabel(e) {
+  if (!e.labels || !e.labels.length) return tr('Motion');
+  // motion alone has no AI certainty: no percentage
+  return e.labels.map(labelName).join(', ') + (e.score ? ' ' + Math.round(e.score * 100) + ' %' : '');
+}
+const eventStart = (e) => new Date(e.start).getTime();
+const eventEnd = (e) => (e.end && !e.end.startsWith('0001') ? new Date(e.end).getTime() : Date.now());
+const camName = (id) => (S.cams.find((c) => c.id === id) || { name: id }).name;
+const camById = (id) => S.cams.find((c) => c.id === id) || { id, name: id, width: 640, height: 480 };
+// Mobile data? The Android app asks the phone; in the browser the Network Information API is used if available.
+function onMobileData() {
+  try { if (NATIVE && NATIVE.mobileData) return !!NATIVE.mobileData(); } catch (e) { /* older app */ }
+  const c = navigator.connection;
+  return !!(c && c.type === 'cellular');
+}
+const rot = (c) => (c && c.rotate === 180 ? 'transform:rotate(180deg);' : '');
+
+// ---------- API ----------
+class AuthError extends Error {}
+async function api(apiPath, opts) {
+  opts = opts || {};
+  const h = { Authorization: 'Bearer ' + S.token };
+  if (opts.body || (opts.method && opts.method !== 'GET')) h['Content-Type'] = 'application/json'; // the server requires JSON for changes
+  let r;
+  try {
+    r = await fetch(S.server + apiPath, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: 'no-store' });
+  } catch (e) { throw new Error(tr('No connection to the server')); }
+  if (r.status === 401 && !opts.noLogout) { logout(true); throw new AuthError(tr('login required')); }
+  if (opts.blob) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }
+  let d = null;
+  try { d = await r.json(); } catch (e) { /* empty response */ }
+  if (!r.ok) throw new Error(d && d.error ? tr(d.error) : 'HTTP ' + r.status);  // the server's error texts are English = keys
+  return d;
+}
+
+// Images require login: fetched as a blob and shown via an object URL.
+const blobCache = new Map(); // apiPath -> url (thumbnails never change)
+async function loadImage(img, apiPath, cache) {
+  if (cache && blobCache.has(apiPath)) { img.src = blobCache.get(apiPath); return true; }
+  try {
+    const b = await api(apiPath, { blob: true });
+    const u = URL.createObjectURL(b);
+    if (cache) {
+      blobCache.set(apiPath, u);
+      if (blobCache.size > 300) { const [k, v] = blobCache.entries().next().value; URL.revokeObjectURL(v); blobCache.delete(k); }
+    } else if (img.dataset.blob) URL.revokeObjectURL(img.dataset.blob);
+    if (!cache) img.dataset.blob = u;
+    img.src = u;
+    return true;
+  } catch (e) { return false; }
+}
+
+// Image + boxes in the camera's coordinates (sub stream), scaled with percentages.
+function withBoxes(img, c, boxList, showText) {
+  const w = c.width || 640, h = c.height || 480;
+  const frameEl = el('div', { class: 'imageFrame', style: rot(c) + 'aspect-ratio:' + w + '/' + h });
+  frameEl.append(img);
+  if (S.opt.boxes && boxList) for (const b of boxList) frameEl.append(boxEl(b, w, h, showText));
+  return frameEl;
+}
+function boxEl(b, w, h, showText) {
+  const d = el('div', { class: 'box', style: `left:${b.x1 / w * 100}%;top:${b.y1 / h * 100}%;width:${(b.x2 - b.x1) / w * 100}%;height:${(b.y2 - b.y1) / h * 100}%` });
+  if (showText) d.append(el('span', {}, labelName(b.label) + ' ' + Math.round(b.conf * 100) + ' %'));
+  return d;
+}
+
+// ---------- navigation ----------
+const stack = [];       // [{name, p}]
+let active = null;      // {name, p, cleanup: [functions]}
+const SCREENS = {};
+
+function go(name, p, replaceTop) {
+  if (active) { active.cleanup.forEach((f) => { try { f(); } catch (e) { /* */ } }); if (!replaceTop) stack.push({ name: active.name, p: active.p }); }
+  active = { name, p: p || {}, cleanup: [] };
+  const root = $('#screen');
+  root.replaceChildren();
+  // The bottom menu is shown on all pages except login (and hidden in fullscreen via CSS).
+  // Sub-pages highlight the main page they belong to.
+  $('#nav').hidden = name === 'login';
+  const navSelected = name === 'camera' ? 'timeline' : name === 'playback' ? 'events'
+    : (name.startsWith('set_') || name === 'log') ? 'settings' : name;
+  for (const b of document.querySelectorAll('#nav button')) b.classList.toggle('selected', b.dataset.go === navSelected);
+  NATIVE && NATIVE.keepAwake(name === 'camera' || name === 'playback' || name === 'live' || name === 'overview');
+  SCREENS[name](root, active.p, active);
+}
+function back() {
+  if (document.body.classList.contains('full')) { setFullscreen(false); return true; }
+  const previous = stack.pop();
+  if (!previous) return false;
+  const previousScreen = active; active = null;
+  previousScreen.cleanup.forEach((f) => { try { f(); } catch (e) { /* */ } });
+  active = null;
+  go(previous.name, previous.p, true);
+  return true;
+}
+window.uiBack = back;
+function navGo(name) {
+  stack.length = 0;
+  if (name === 'timeline') {
+    const id = (S.cams.find((c) => c.id === S.lastCam) || S.cams[0] || {}).id;
+    if (!id) return;
+    go('overview', {}, true); go('camera', { cam: id });
+    return;
+  }
+  go(name, {}, true);
+}
+function interval(ctx, f, ms) { f(); const t = setInterval(f, ms); ctx.cleanup.push(() => clearInterval(t)); }
+function setFullscreen(until) {
+  document.body.classList.toggle('full', until);
+  if (NATIVE) NATIVE.setFullscreen(until);
+  else if (until && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  else if (!until && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+// Esc in the browser closes fullscreen
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('full'); });
+
+function topBar(heading2, opts) {
+  opts = opts || {};
+  const h = el('header', { class: 'top' + (opts.back ? ' m-back' : '') });
+  if (opts.back) h.append(iconButton('back', tr('Back'), () => back()));
+  else if (opts.logo) h.append(el('span', { class: 'logo', html: ICON.eye }));
+  const t = el('h1', {}, heading2);
+  if (opts.under) t.append(el('span', { class: 'under' }, opts.under));
+  h.append(t);
+  for (const x of opts.right || []) h.append(x);
+  return h;
+}
+
+// ---------- data shared by several screens ----------
+async function fetchCameras() {
+  try { S.cams = await api('/api/cams'); } catch (e) { /* keep the last one */ }
+  return S.cams;
+}
+async function fetchEvents() {
+  try { S.events = await api('/api/events?limit=100'); } catch (e) { /* */ }
+  updateBadge();
+  return S.events;
+}
+function updateBadge() {
+  const n = S.events.filter((e) => e.id > S.seen).length;
+  const b = $('#navBadge');
+  b.hidden = n === 0;
+  b.textContent = n > 99 ? '99+' : n;
+}
+function markSeen() {
+  const max = S.events.reduce((m, e) => Math.max(m, e.id), S.seen);
+  if (max > S.seen) { S.seen = max; save('seen', max); }
+  updateBadge();
+}
+
+// ---------- camera tile with a refreshing still image ----------
+function tile(c, ctx, large) {
+  const img = el('img', { alt: '', style: rot(c) });
+  const name = el('span', { class: 'name' }, c.name);
+  const motionTag = el('span', { class: 'motionTag' }, tr('MOTION'));
+  const homeTag = el('span', { class: 'motionTag homeTag', title: tr('No events while you are home') }, tr('HOME'));
+  const noSignal = el('span', { class: 'noSignal' }, c.optional ? tr('Switched off') : tr('No signal'));
+  const f = el('button', { type: 'button', class: 'tile' + (c.height > c.width ? ' tall' : ''), 'aria-label': tr('Open {name}', { name: c.name }),
+    onclick: () => go('camera', { cam: c.id }) }, img, name, noSignal);
+  let i = 0;
+  const refresh = async () => {
+    const cc = camById(c.id);
+    noSignal.hidden = cc.online;
+    if (cc.motion) name.append(motionTag); else motionTag.remove();
+    if (cc.events_off) name.append(homeTag); else homeTag.remove();
+    if (cc.online && (await loadImage(img, '/api/cams/' + c.id + '/snapshot.jpg'))) noSignal.hidden = true;
+  };
+  interval(ctx, () => { if (i++ % 1 === 0) refresh(); }, large ? 1500 : 2000);
+  ctx.cleanup.push(() => img.dataset.blob && URL.revokeObjectURL(img.dataset.blob));
+  return f;
+}
+
+function eventRowEl(e, compact, onclick) {
+  const c = camById(e.cam);
+  const img = el('img', { alt: '' });
+  const frame = withBoxes(img, c, e.boxes, false);
+  const mini = el('span', { class: 'thumbnail' }, frame);
+  if (e.id > S.seen && !compact) mini.append(el('span', { class: 'fresh', 'aria-label': tr('New') }));
+  if (e.keep) mini.append(el('span', { class: 'protected', 'aria-label': tr('Protected'), html: ICON.flag }));
+  loadImage(img, '/api/events/' + e.id + '/thumb.jpg', true);
+  const text = el('span', { class: 'eventText' },
+    el('b', {}, camName(e.cam)),
+    el('span', { class: 'd' }, ago(eventStart(e)) + (compact ? ' · ' + duration(eventEnd(e) - eventStart(e)) : '')),
+    compact ? null : el('span', { class: 'd' }, duration(eventEnd(e) - eventStart(e))),
+    el('span', { class: 'l' }, eventLabel(e)));
+  return el('button', { type: 'button', class: 'eventRow' + (compact ? ' compact' : ''), onclick }, mini, text);
+}
+
+// ---------- screens ----------
+SCREENS.login = (root) => {
+  const errorText = el('p', { class: 'errorText', role: 'alert' });
+  const userField = el('input', { type: 'text', autocomplete: 'username', autocapitalize: 'none', value: (S.user && S.user.name) || '' });
+  const pw = el('input', { type: 'password', autocomplete: 'current-password' });
+  const server = el('input', { type: 'url', value: S.server });
+  const serverField = el('label', { class: 'field', hidden: true }, 'Server', server);
+  const btn = el('button', { type: 'submit', class: 'btn green', style: 'min-height:52px;font-size:18px;letter-spacing:2px;margin-top:10px' }, tr('LOG IN'));
+  const form = el('form', { onsubmit: async (ev) => {
+    ev.preventDefault();
+    errorText.textContent = '';
+    btn.disabled = true; btn.textContent = tr('Logging in …');
+    S.server = server.value.trim().replace(/\/+$/, '') || STD_SERVER;
+    try {
+      const r = await fetch(S.server + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: userField.value.trim(), password: pw.value, device: navigator.userAgent.includes('Android') ? 'Android-app' : 'browser' }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error ? tr(d.error) : tr('Login failed'));
+      S.token = d.token; S.user = d.user;
+      save('server', S.server); save('token', S.token); save('user', S.user);
+      NATIVE && NATIVE.login(S.server, S.token);
+      start();
+    } catch (e) {
+      errorText.textContent = e.message === 'Failed to fetch' ? tr('No connection to the server') : e.message;
+      btn.disabled = false; btn.textContent = tr('LOG IN');
+    }
+  } },
+  el('label', { class: 'field' }, tr('User'), userField),
+  el('label', { class: 'field' }, tr('Password'), pw),
+  serverField, errorText, btn,
+  WEB ? null : el('button', { type: 'button', class: 'server', onclick: () => { serverField.hidden = !serverField.hidden; } }, tr('Server') + ': ' + S.server.replace(/^https?:\/\//, '')),
+  el('p', { class: 'hint', style: 'text-align:center;color:#D3F0EC' }, tr('You stay logged in on this phone')));
+  root.append(el('div', { class: 'login' },
+    el('div', { class: 'head', html: ICON.eyeColour + '<h1>ARGUSSEN</h1><small>' + tr('CAMERA SYSTEM') + '</small>' }), form));
+};
+
+SCREENS.overview = (root, p, ctx) => {
+  const online = el('span', { class: tr('online') });
+  const grid = el('div', { class: 'grid' });
+  const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  root.append(topBar('ARGUSSEN', { logo: true, right: [online] }),
+    el('div', { class: 'page' }, el('div', { class: 'content' },
+      el('div', { class: 'heading' }, el('h2', {}, tr('Live')), el('span', { class: 'hint' }, tr('Tap to open'))),
+      grid,
+      el('div', { class: 'heading', style: 'margin-top:6px' }, el('h2', {}, tr('Latest events')),
+        el('button', { type: 'button', class: 'link', onclick: () => navGo('events') }, tr('See all'))),
+      list)));
+  let drawn = null; // null = not drawn yet (an empty list must also be drawn)
+  interval(ctx, async () => {
+    const cams = await fetchCameras();
+    const counted = cams.filter((c) => c.online || !c.optional);   // cameras that are off and allowed to be off do not count
+    const n = counted.filter((c) => c.online).length;
+    if (!S.cams.length) online.replaceChildren(); // no cameras yet: nothing to count
+    else online.replaceChildren(el('span', { class: 'dot' + (n < counted.length ? ' off' : '') }), tr('{n} of {m} online', { n, m: counted.length }));
+    const camKey = cams.map((c) => c.id).join();
+    if (camKey !== drawn) {
+      drawn = camKey;
+      grid.replaceChildren(...(cams.length ? cams.map((c) => tile(c, ctx, false))
+        : [el('p', { class: 'empty', style: 'grid-column:1/-1' }, S.user && S.user.admin
+          ? tr('No cameras yet – add your first under Settings → Cameras.') : tr('You do not have access to any cameras yet.'))]));
+    }
+  }, 2000);
+  let lastOne = null;
+  interval(ctx, async () => {
+    const evs = (await fetchEvents()).slice(0, 5);
+    const n = evs.map((e) => e.id + ':' + e.score + ':' + e.end).join();
+    if (n === lastOne) return;
+    lastOne = n;
+    list.replaceChildren(...(evs.length ? evs.map((e) => eventRowEl(e, true, () => go('playback', { id: e.id, list: S.events.map((x) => x.id) })))
+      : [el('p', { class: 'empty' }, tr('No events yet'))]));
+  }, 15000);
+};
+
+SCREENS.live = (root, p, ctx) => {
+  const grid = el('div', { class: 'grid large' });
+  root.append(topBar(tr('Live')), el('div', { class: 'page' }, el('div', { class: 'content' }, grid)));
+  let drawn = null;
+  interval(ctx, async () => {
+    const cams = await fetchCameras();
+    const k = cams.map((c) => c.id).join();
+    if (k !== drawn) { drawn = k; grid.replaceChildren(...cams.map((c) => tile(c, ctx, true))); }
+  }, 2000);
+};
+
+SCREENS.events = (root, p, ctx) => {
+  const st = Object.assign({ filter: 'All', search: '' }, p.filter ? p : {});
+  const chips = el('div', { class: 'chips' });
+  const search = el('input', { type: 'search', placeholder: tr('Search camera'), 'aria-label': tr('Search camera'), value: st.search,
+    oninput: () => { st.search = search.value; p.search = st.search; draw(); } });
+  const list = el('div');
+  const moreBtn = el('button', { type: 'button', class: 'moreBtn', hidden: true, onclick: () => loadMore() }, tr('Load older events'));
+  root.append(topBar(tr('Events')),
+    el('div', { class: 'filters' }, el('label', { class: 'search', html: ICON.search }, search), chips),
+    el('div', { class: 'page' }, list, moreBtn));
+  let allItems = [];
+  let protectedEvents = [];
+  const drawChips = () => chips.replaceChildren(...['All', ...LABELS, 'Protected'].map((n) =>
+    el('button', { type: 'button', class: 'chip' + (st.filter === n ? ' selected' : ''), 'aria-pressed': st.filter === n ? 'true' : 'false',
+      onclick: async () => {
+        st.filter = n; p.filter = n; drawChips();
+        if (n === 'Protected') { try { protectedEvents = await api('/api/events?keep=1&limit=500'); } catch (e) { protectedEvents = []; } }
+        draw();
+      } }, tr(n))));
+  function draw() {
+    const q = st.search.trim().toLowerCase();
+    const source = st.filter === 'Protected' ? protectedEvents : allItems;
+    const shown = source.filter((e) => (st.filter === 'All' || st.filter === 'Protected' || (e.labels || []).includes(st.filter.toLowerCase()))
+      && (!q || camName(e.cam).toLowerCase().includes(q)));
+    const items = [];
+    let day = '';
+    for (const e of shown) {
+      const d = dayName(eventStart(e));
+      if (d !== day) { day = d; items.push(el('h2', { class: 'small day' }, d)); }
+      items.push(eventRowEl(e, false, () => go('playback', { id: e.id, list: shown.map((x) => x.id) })));
+    }
+    list.replaceChildren(...(items.length ? items : [el('p', { class: 'empty' }, st.filter === 'Protected' ? tr('No protected events') : allItems.length ? tr('No events match the filter') : tr('No events yet'))]));
+    moreBtn.hidden = allItems.length < 100 || st.filter === 'Protected';
+  }
+  async function loadMore() {
+    const lastOne = allItems[allItems.length - 1];
+    if (!lastOne) return;
+    moreBtn.disabled = true;
+    try {
+      const more = await api('/api/events?limit=100&before=' + eventStart(lastOne));
+      allItems = allItems.concat(more);
+      if (more.length < 100) moreBtn.remove();
+      draw();
+    } catch (e) { /* */ }
+    moreBtn.disabled = false;
+  }
+  drawChips();
+  interval(ctx, async () => {
+    await fetchCameras();
+    const newItems = await fetchEvents();
+    if (allItems.length <= 100) allItems = newItems.slice();
+    draw();
+  }, 15000);
+  ctx.cleanup.push(markSeen);
+};
+
+// ---------- video ----------
+// Player using hls.js; the login token is sent with every request.
+function newPlayer(c, ctx) {
+  const video = el('video', { style: rot(c), playsinline: true, muted: true, autoplay: true, poster: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' });
+  video.muted = true;
+  const overlay = el('div', { class: 'overlay', style: rot(c) });
+  const msg = el('div', { class: 'msg', hidden: true });
+  const clock = el('span', { class: 'clock', hidden: true });
+  const buttons = el('div', { class: 'buttons' });
+  const zoom = el('div', { class: 'zoom' }, video, overlay);
+  const fullBack = el('button', { type: 'button', class: 'full-back', 'aria-label': tr('Close full screen'), html: ICON.back, onclick: () => setFullscreen(false) });
+  const box = el('div', { class: 'player', style: 'aspect-ratio:' + (c.width || 4) + '/' + (c.height || 3) }, zoom, msg, clock, buttons, fullBack);
+  zoomable(box, zoom);
+  let hls = null;
+  const A = { video, box, overlay, msg, clock, buttons, hls: null };
+  A.notice = (t) => { msg.textContent = t || ''; msg.hidden = !t; };
+  A.stop = () => { if (hls) { hls.destroy(); hls = null; A.hls = null; } A.frags = null; video.removeAttribute('src'); };
+  // play(url, live, at): at = wall-clock time (ms) to start at (recordings only)
+  A.play = (url, live, at) => new Promise((ok) => {
+    A.stop();
+    A.notice(tr('Loading video …'));
+    if (!window.Hls || !Hls.isSupported()) { A.notice(tr('This device cannot play the video')); ok(false); return; }
+    hls = new Hls(Object.assign({
+      xhrSetup: (xhr) => xhr.setRequestHeader('Authorization', 'Bearer ' + S.token),
+      enableWorker: true, backBufferLength: 30,
+    }, live ? { liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 6, maxBufferLength: 8 } : { maxBufferLength: 30, startPosition: -1 }));
+    A.hls = hls;
+    let started = false;
+    hls.on(Hls.Events.LEVEL_LOADED, (ev, d) => {
+      if (!live) A.frags = d.details.fragments;
+      if (started || live || !at) return;
+      started = true;
+      const fr = d.details.fragments;
+      let pos = 0;
+      for (const f of fr) if (f.programDateTime && f.programDateTime <= at) pos = f.start + (at - f.programDateTime) / 1000;
+      hls.startLoad(pos);
+      video.currentTime = pos;
+    });
+    hls.on(Hls.Events.FRAG_BUFFERED, () => { A.notice(''); });
+    let mediaErrors = 0;
+    const noCodec = () => { A.notice(tr('This browser cannot show this video (the camera probably sends H.265). Choose H.264 in the camera, or use a browser that supports H.265.')); ok(false); };
+    hls.on(Hls.Events.ERROR, (ev, d) => {
+      if (/codec/i.test(d.details || '') || (d.error && /codec|not supported/i.test(d.error.message || ''))) { if (hls) hls.destroy(); hls = null; A.hls = null; noCodec(); return; }
+      if (!d.fatal) return;
+      if (d.response && d.response.code === 404 && !live) { A.notice(tr('No recording here')); ok(false); return; }
+      if (live && d.type === Hls.ErrorTypes.NETWORK_ERROR) { A.notice(c.optional && !camById(c.id).online ? tr('The camera is switched off') : tr('Waiting for the camera …')); setTimeout(() => { if (hls) { hls.loadSource(S.server + url); } }, 3000); return; }
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { A.notice(tr('Connection trouble – retrying …')); setTimeout(() => hls && hls.startLoad(), 2000); }
+      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { if (++mediaErrors > 2) noCodec(); else hls.recoverMediaError(); }
+      else { A.notice(tr('The video could not be played')); ok(false); }
+    });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); ok(true); });
+    hls.loadSource(S.server + url);
+    hls.attachMedia(video);
+  });
+  // wall-clock time of what is shown right now
+  // Recordings: computed from the playlist's times (hls.js' playingDate drifts over many minute changes).
+  A.frags = null;
+  A.at = () => {
+    if (!hls) return null;
+    const ct = video.currentTime;
+    if (A.frags && A.frags.length) {
+      let f = A.frags[0];
+      for (const x of A.frags) { if (x.start <= ct) f = x; else break; }
+      if (f.programDateTime) return f.programDateTime + (ct - f.start) * 1000;
+    }
+    return hls.playingDate ? hls.playingDate.getTime() : null;
+  };
+  // the box the video actually fills (object-fit: contain)
+  A.rect = () => {
+    const bw = box.clientWidth, bh = box.clientHeight, vw = video.videoWidth || c.width, vh = video.videoHeight || c.height;
+    const s = Math.min(bw / vw, bh / vh);
+    return { x: (bw - vw * s) / 2, y: (bh - vh * s) / 2, w: vw * s, h: vh * s };
+  };
+  A.drawBoxes = (boxList) => {
+    overlay.replaceChildren();
+    if (!boxList || !boxList.length) return;
+    const r = A.rect(), w = c.width || 640, h = c.height || 480;
+    const frameEl = el('div', { style: `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px` });
+    for (const b of boxList) frameEl.append(boxEl(b, w, h, true));
+    overlay.append(frameEl);
+  };
+  buttons.append(iconButton('full', tr('Full screen'), () => setFullscreen(!document.body.classList.contains('full')), 'small-btn'));
+  A.buttons = buttons;
+  ctx.cleanup.push(() => { A.stop(); setFullscreen(false); });
+  return A;
+}
+
+// Pinch to zoom, drag with one finger when zoomed in, double tap = zoom in/out.
+function zoomable(box, inner) {
+  let s = 1, x = 0, y = 0, lastTap = 0, moved = false;
+  const pts = new Map();
+  let start = null;
+  const draw = () => {
+    const w = box.clientWidth, h = box.clientHeight;
+    const mx = w * (s - 1) / 2, my = h * (s - 1) / 2;
+    x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+    inner.style.transform = s === 1 ? '' : `translate(${x}px,${y}px) scale(${s})`;
+    box.classList.toggle('zoomed', s > 1);
+  };
+  const mid = () => { const p = [...pts.values()]; return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2, d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) }; };
+  // zoom around a point (px relative to the box centre)
+  const zoomTo = (fresh, px, py) => {
+    fresh = Math.max(1, Math.min(8, fresh));
+    x = px - (px - x) * fresh / s; y = py - (py - y) * fresh / s; s = fresh;
+    if (s === 1) { x = 0; y = 0; }
+    draw();
+  };
+  const rel = (e) => { const r = box.getBoundingClientRect(); return { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 }; };
+  box.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    box.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = false;
+    if (pts.size === 2) { const m = mid(); start = { s, x, y, m, r: rel({ clientX: m.x, clientY: m.y }) }; }
+  });
+  box.addEventListener('pointermove', (e) => {
+    const p = pts.get(e.pointerId);
+    if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+    p.x = e.clientX; p.y = e.clientY;
+    if (pts.size === 2 && start) {
+      const m = mid();
+      s = start.s; x = start.x; y = start.y;
+      zoomTo(start.s * m.d / start.m.d, start.r.x, start.r.y);
+      x += m.x - start.m.x; y += m.y - start.m.y; draw();
+    } else if (pts.size === 1 && s > 1) { x += dx; y += dy; draw(); }
+  });
+  const endT = (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size < 2) start = null;
+    if (pts.size === 0 && !moved && e.type === 'pointerup') {
+      const nowT = Date.now();
+      if (nowT - lastTap < 300) { const r = rel(e); zoomTo(s > 1 ? 1 : 2.5, r.x, r.y); lastTap = 0; }
+      else lastTap = nowT;
+    }
+  };
+  box.addEventListener('pointerup', endT);
+  box.addEventListener('pointercancel', endT);
+  new ResizeObserver(() => draw()).observe(box);
+}
+
+// Live + timeline for one camera
+SCREENS.camera = (root, p, ctx) => {
+  const c = camById(p.cam);
+  S.lastCam = c.id; save('lastCam', c.id);
+  const st = { hd: p.hd !== undefined ? !!p.hd : true, at: p.at || null, day: p.day || dayStart(p.at || Date.now()), tl: null };
+  const camChips = S.cams.length > 1 ? el('div', { class: 'chips camPicker' }, ...S.cams.map((k) =>
+    el('button', { type: 'button', class: 'chip' + (k.id === c.id ? ' selected' : ''), 'aria-pressed': k.id === c.id ? 'true' : 'false',
+      onclick: () => { if (k.id !== c.id) go('camera', { cam: k.id, at: st.at === null ? null : (A.at() || st.at), hd: st.hd, day: st.day, speed: st.speed }, true); } }, k.name))) : null;
+  const badge = el('span');
+  const A = newPlayer(c, ctx);
+  const sd = el('button', { type: 'button', class: 'small-btn' }, 'SD');
+  const hd = el('button', { type: 'button', class: 'small-btn' }, 'HD');
+  const SPEEDS = [1, 2, 4, 0.5];
+  st.speed = p.speed || 1;
+  const speedBtn = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Playback speed') });
+  const setSpeed = () => {
+    speedBtn.textContent = (st.speed === 0.5 ? '½' : st.speed) + '×';
+    A.video.defaultPlaybackRate = st.speed; A.video.playbackRate = st.speed;
+  };
+  speedBtn.onclick = () => { st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length]; setSpeed(); };
+  A.video.addEventListener('loadedmetadata', () => { A.video.playbackRate = st.at === null ? 1 : st.speed; });
+  A.buttons.append(sd, hd, speedBtn);
+  const days = el('div', { class: 'chips' });
+  const dateInput = el('input', { type: 'date', class: 'datePicker', 'aria-label': tr('Pick day') });
+  const bar = el('div', { class: 'tl-bar', role: 'slider', 'aria-label': tr('Timeline – tap to seek'), tabindex: '0' });
+  const head = el('div', { class: 'head' });
+  const axisEl = el('div', { class: 'tl-axis' }, ...['00', '06', '12', '18', '24'].map((x) => el('span', {}, x)));
+  const eventList = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  const toLive = el('button', { type: 'button', class: 'btn red', onclick: () => { st.at = null; play(); } }, tr('Go to live'));
+  root.append(topBar(c.name, { back: true, right: [badge] }), A.box,
+    el('div', { class: 'page under-player' },
+      el('section', { class: 'tl' }, camChips,
+        el('div', { class: 'heading' }, el('h2', {}, tr('Timeline')), days), axisEl, bar,
+        el('div', { class: 'tl-buttons' }, toLive), el('p', { class: 'hint' }, tr('Coloured = recorded · orange = event · tap the line to seek')), dateInput),
+      el('div', { class: 'content' }, el('h2', { class: 'small' }, tr('Events this day')), eventList)));
+
+  function drawBadge() {
+    badge.replaceChildren(st.at === null ? el('span', { class: 'liveBadge' }, 'LIVE')
+      : el('span', { class: 'timeBadge' }, (dayStart(st.at) === dayStart(Date.now()) ? '' : new Date(st.at).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) + ' ') + fmtTime(A.at() || st.at, true)));
+    sd.classList.toggle('selected', !st.hd); hd.classList.toggle('selected', st.hd);
+    toLive.hidden = st.at === null;
+    speedBtn.hidden = st.at === null;
+  }
+  async function play() {
+    A.overlay.replaceChildren();
+    if (st.at === null) {
+      await A.play('/api/live/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '/index.m3u8', true);
+    } else {
+      const from = Math.round(st.at - 60000), until = Math.round(st.at + 3 * 3600000);
+      let ok = await A.play('/api/play/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '?from=' + from + '&to=' + until, false, st.at);
+      if (!ok && st.hd) { st.hd = false; A.notice(tr('Full resolution is not stored here – showing SD')); ok = await A.play('/api/play/' + c.id + '/sub?from=' + from + '&to=' + until, false, st.at); }
+      setSpeed();
+    }
+    drawBadge();
+  }
+  sd.onclick = () => { if (st.hd) { st.hd = false; st.at = A.at() && st.at !== null ? A.at() : st.at; play(); } };
+  hd.onclick = () => { if (!st.hd) { st.hd = true; st.at = A.at() && st.at !== null ? A.at() : st.at; play(); } };
+
+  function drawDays() {
+    const i = dayStart(Date.now());
+    const choices = [[tr('Today'), i], [tr('Yesterday'), i - DAY_MS]];
+    const other = st.day !== i && st.day !== i - DAY_MS;
+    days.replaceChildren(...choices.map(([n, d]) => el('button', { type: 'button', class: 'chip' + (st.day === d ? ' selected' : ''), onclick: () => { st.day = d; drawDays(); fetchTimeline(); } }, n)),
+      el('button', { type: 'button', class: 'chip' + (other ? ' selected' : ''), onclick: () => { dateInput.showPicker ? dateInput.showPicker() : dateInput.click(); } },
+        other ? new Date(st.day).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) : tr('Pick day')));
+  }
+  dateInput.max = new Date().toISOString().slice(0, 10);
+  dateInput.onchange = () => { if (dateInput.value) { const [y, m, d] = dateInput.value.split('-').map(Number); st.day = new Date(y, m - 1, d).getTime(); drawDays(); fetchTimeline(); } };
+
+  async function fetchTimeline() {
+    const from = st.day, until = Math.min(st.day + DAY_MS, Date.now() + 60000);
+    try { st.tl = await api('/api/timeline/' + c.id + '?from=' + from + '&to=' + until); } catch (e) { st.tl = null; }
+    drawTimeline();
+  }
+  const pct = (t) => Math.max(0, Math.min(100, (t - st.day) / DAY_MS * 100));
+  function drawTimeline() {
+    const items = [];
+    const tl = st.tl || { sub: [], main: [], events: [] };
+    for (const [a, b] of tl.sub) items.push(el('div', { class: 'opt', style: `left:${pct(a)}%;width:${Math.max(0.2, pct(b) - pct(a))}%` }));
+    for (const [a, b] of tl.main) items.push(el('div', { class: 'opt hd', style: `left:${pct(a)}%;width:${Math.max(0.2, pct(b) - pct(a))}%` }));
+    for (const e of tl.events) items.push(el('button', { type: 'button', class: 'hm', style: `left:${pct(eventStart(e))}%`, 'aria-label': tr('Event') + ' ' + fmtTime(eventStart(e)) + ' ' + eventLabel(e),
+      onclick: (ev) => { ev.stopPropagation(); go('playback', { id: e.id, list: tl.events.map((x) => x.id), ev: e }); } }));
+    items.push(head);
+    bar.replaceChildren(...items);
+    const evs = tl.events.slice().reverse ? tl.events.slice() : [];
+    eventList.replaceChildren(...(evs.length ? evs.map((e) => el('button', { type: 'button', class: 'list-row', onclick: () => go('playback', { id: e.id, list: evs.map((x) => x.id), ev: e }) },
+      el('span', {}, fmtTime(eventStart(e), true)), el('span', { class: 'l' }, eventLabel(e)))) : [el('p', { class: 'hint' }, tr('No events'))]));
+    moveHead();
+  }
+  function moveHead() {
+    const t = st.at === null ? Date.now() : (A.at() || st.at);
+    head.style.left = pct(t) + '%';
+    head.hidden = t < st.day || t > st.day + DAY_MS;
+  }
+  bar.addEventListener('click', (ev) => {
+    const r = bar.getBoundingClientRect();
+    const t = Math.round(st.day + (ev.clientX - r.left) / r.width * DAY_MS);
+    if (t > Date.now() - 30000) { st.at = null; } else st.at = t;
+    play();
+  });
+
+  // live boxes from the server
+  interval(ctx, async () => {
+    if (st.at === null && S.opt.liveBoxes) {
+      await fetchCameras();
+      A.drawBoxes(camById(c.id).boxes);
+    } else A.overlay.replaceChildren();
+    moveHead();
+    if (st.at !== null) drawBadge();
+  }, 1000);
+  interval(ctx, () => { if (st.day === dayStart(Date.now())) fetchTimeline(); }, 60000);
+  drawDays(); drawBadge(); play();
+};
+
+SCREENS.playback = async (root, p, ctx) => {
+  let e = p.ev || S.events.find((x) => x.id === p.id);
+  if (!e) {
+    try { const l = await api('/api/events?limit=500'); e = l.find((x) => x.id === p.id); } catch (err2) { /* */ }
+    if (!e) { root.append(topBar(tr('Event'), { back: true }), el('p', { class: 'empty' }, tr('The event no longer exists'))); return; }
+  }
+  if (e.id > S.seen) { S.seen = Math.max(S.seen, e.id); }
+  const c = camById(e.cam);
+  const start = eventStart(e), endT = eventEnd(e);
+  const preS = c.pre_seconds !== undefined ? c.pre_seconds : 10, postS = c.post_seconds !== undefined ? c.post_seconds : 20;
+  const from = start - preS * 1000, until = endT + postS * 1000;
+  // on mobile data events start in SD (one HD minute can be 20+ MB) – the HD button switches; the option is in General
+  const st = { hd: !(S.opt.mobileSD && onMobileData()), speed: 1 };
+  const A = newPlayer(c, ctx);
+  // poster with boxes until the video plays
+  const posterImg = el('img', { alt: '' });
+  const poster = el('div', { class: 'poster' }, withBoxes(posterImg, c, e.boxes, true));
+  loadImage(posterImg, '/api/events/' + e.id + '/thumb.jpg', true);
+  A.overlay.parentNode.insertBefore(poster, A.overlay);
+  A.video.addEventListener('playing', () => { poster.hidden = true; });
+  const sd = el('button', { type: 'button', class: 'small-btn' }, 'SD');
+  const hdBtn = el('button', { type: 'button', class: 'small-btn' }, 'HD');
+  A.buttons.append(sd, hdBtn);
+  A.clock.hidden = false;
+
+  const list = p.list || [];
+  const idx = list.indexOf(e.id);
+  const neighbours = (d) => { const n = list[idx + d]; if (n !== undefined) go('playback', { id: n, list }, true); };
+  const playBtn = el('button', { type: 'button', class: 'play filled', 'aria-label': tr('Pause'), html: ICON.pause });
+  const speed = el('button', { type: 'button', class: 'speed', 'aria-label': tr('Speed') }, '1×');
+  const head = el('div', { class: 'head' });
+  const bar = el('div', { class: 'tl-bar', style: 'height:34px' },
+    el('div', { class: 'hm shown', style: `left:${(start - from) / (until - from) * 100}%;width:${(endT - start) / (until - from) * 100}%` }), head);
+  root.append(topBar(c.name, { back: true, under: dayName(start) + ' ' + fmtTime(start, true) + ' · ' + duration(endT - start) }), A.box,
+    el('div', { class: 'controls under-player' },
+      el('button', { type: 'button', 'aria-label': tr('Back 10 seconds'), html: ICON.back10, onclick: () => { A.video.currentTime = Math.max(0, A.video.currentTime - 10); } }),
+      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Newer event'), html: ICON.previous, disabled: idx <= 0, style: idx <= 0 ? 'opacity:.35' : '', onclick: () => neighbours(-1) }),
+      playBtn,
+      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Older event'), html: ICON.next, disabled: idx < 0 || idx >= list.length - 1, style: idx < 0 || idx >= list.length - 1 ? 'opacity:.35' : '', onclick: () => neighbours(1) }),
+      speed),
+    el('div', { class: 'page under-player' },
+      el('div', { class: 'tl', style: 'background:none' },
+        el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
+        el('p', { class: 'hint' }, tr('Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }))),
+      el('div', { class: 'content' },
+        el('h2', { class: 'small' }, tr('Detected')),
+        el('div', { class: 'eventLabels' }, ...(e.labels && e.labels.length ? e.labels.map((l) => el('span', { class: 'eventLabel' }, labelName(l))) : [el('span', { class: 'eventLabel' }, tr('Motion'))]),
+          e.score ? el('span', { class: 'eventLabel' }, tr('{p} % certain', { p: Math.round(e.score * 100) })) : null),
+        eventActions(e),
+        el('div', { class: 'to' },
+          el('button', { type: 'button', class: 'btn grey', html: ICON.camera + tr('Watch live'), onclick: () => go('camera', { cam: c.id }) }),
+          el('button', { type: 'button', class: 'btn grey', html: ICON.clock + tr('Open timeline'), onclick: () => go('camera', { cam: c.id, at: start }) })))));
+
+  playBtn.onclick = () => { if (A.video.paused) A.video.play(); else A.video.pause(); };
+  A.video.addEventListener('play', () => { playBtn.innerHTML = ICON.pause; playBtn.setAttribute('aria-label', tr('Pause')); });
+  A.video.addEventListener('pause', () => { playBtn.innerHTML = ICON.play; playBtn.setAttribute('aria-label', tr('Play')); });
+  const SPEEDS = [1, 2, 4, 0.5];
+  speed.onclick = () => { st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length]; A.video.playbackRate = st.speed; speed.textContent = (st.speed === 0.5 ? '½' : st.speed) + '×'; };
+  bar.addEventListener('click', (ev) => {
+    const r = bar.getBoundingClientRect();
+    const t = from + (ev.clientX - r.left) / r.width * (until - from);
+    const nowT = A.at();
+    if (nowT) A.video.currentTime = Math.max(0, A.video.currentTime + (t - nowT) / 1000);
+  });
+  A.video.addEventListener('timeupdate', () => {
+    const t = A.at();
+    if (!t) return;
+    A.clock.textContent = fmtTime(t, true);
+    head.style.left = Math.max(0, Math.min(100, (t - from) / (until - from) * 100)) + '%';
+    if (t > until + 1000 && !A.video.paused) A.video.pause();
+  });
+  async function play() {
+    sd.classList.toggle('selected', !st.hd); hdBtn.classList.toggle('selected', st.hd);
+    const t = A.at() || from;
+    let ok = await A.play('/api/play/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '?from=' + from + '&to=' + until, false, t);
+    if (!ok && st.hd) { st.hd = false; sd.classList.add('selected'); hdBtn.classList.remove('selected'); ok = await A.play('/api/play/' + c.id + '/sub?from=' + from + '&to=' + until, false, t); }
+    if (!ok) A.notice(tr('The recording is no longer stored'));
+    A.video.playbackRate = st.speed;
+  }
+  sd.onclick = () => { if (st.hd) { st.hd = false; play(); } };
+  hdBtn.onclick = () => { if (!st.hd) { st.hd = true; play(); } };
+  play();
+};
+
+// Download / protect / delete an event
+function eventActions(e) {
+  const status = el('p', { class: 'hint', role: 'status' });
+  const protectBtn = el('button', { type: 'button', class: 'btn grey' });
+  // everybody may protect an event; only administrators may remove the protection
+  const drawProtect = () => { protectBtn.innerHTML = ICON.flag + tr(e.keep ? 'Protected' : 'Protect'); protectBtn.classList.toggle('active', !!e.keep); protectBtn.setAttribute('aria-pressed', e.keep ? 'true' : 'false');
+    protectBtn.disabled = !!e.keep && !(S.user && S.user.admin); };
+  drawProtect();
+  protectBtn.onclick = async () => {
+    try {
+      const r = await api('/api/events/' + e.id + '/keep', { method: 'POST', body: { keep: !e.keep } });
+      e.keep = r.keep; drawProtect();
+      const x = S.events.find((y) => y.id === e.id); if (x) x.keep = e.keep;
+      status.textContent = e.keep ? tr('The event and the recording around it will not be deleted.') : tr('Protection removed – deleted after 30 days as usual.');
+    } catch (err2) { status.textContent = err2.message; }
+  };
+  const t = new Date(eventStart(e));
+  const name = 'ArgusSen_' + camName(e.cam).replace(/\s+/g, '_') + '_' + t.getFullYear() + '-' + to(t.getMonth() + 1) + '-' + to(t.getDate()) + '_' + to(t.getHours()) + '-' + to(t.getMinutes()) + '-' + to(t.getSeconds()) + '.mp4';
+  const load = el('button', { type: 'button', class: 'btn grey', html: ICON.download + tr('Download video'), onclick: async () => {
+    const url = S.server + '/api/events/' + e.id + '/clip.mp4';
+    if (NATIVE && NATIVE.download) {
+      status.textContent = NATIVE.download(url, name) ? tr('Downloading … the file goes to Downloads (see the notification).') : tr('Could not start the download.');
+      return;
+    }
+    status.textContent = tr('Downloading …');
+    try {
+      const b = await api('/api/events/' + e.id + '/clip.mp4', { blob: true });
+      const a = el('a', { href: URL.createObjectURL(b), download: name }); document.body.append(a); a.click(); a.remove();
+      status.textContent = tr('Downloaded.');
+    } catch (err2) { status.textContent = err2.message; }
+  } });
+  const items = [load, protectBtn];
+  if (S.user && S.user.admin) items.push(el('button', { type: 'button', class: 'btn grey', html: ICON.trash + tr('Delete'), onclick: async () => {
+    if (!confirm(tr('Delete the event? This cannot be undone.'))) return;
+    try {
+      await api('/api/events/' + e.id, { method: 'DELETE' });
+      S.events = S.events.filter((y) => y.id !== e.id);
+      back();
+    } catch (err2) { status.textContent = err2.message; }
+  } }));
+  return el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, el('div', { class: 'three' }, ...items), status);
+}
+
+SCREENS.status = (root, p, ctx) => {
+  const admin = S.user && S.user.admin;
+  const content = el('div', { class: 'content' });
+  root.append(topBar(tr('Status')), el('div', { class: 'page' }, content));
+  const ring = (label, v, colour) => el('div', { class: 'ring' },
+    el('div', { class: 'r', style: `background:conic-gradient(${colour} 0 ${v}%, #454545 ${v}% 100%)` }, el('span', {}, Math.round(v) + ' %')), label);
+  interval(ctx, async () => {
+    let d = null;
+    try { d = admin ? await api('/api/status') : null; } catch (e) { /* */ }
+    const cams = await fetchCameras();
+    const sys = d && d.system;
+    const ver = NATIVE ? NATIVE.versionName() : 'web';
+    const items = [el('div', { class: 'logo-large', html: ICON.eyeColour + '<b>ARGUSSEN</b>' },
+      el('span', { class: 'hint' }, 'App ' + ver + (d ? ' · server ' + d.version + ' · ' + tr('up') + ' ' + uptime(sys.uptime_s) : '')))];
+    if (sys && sys.storage_ok === false) items.push(el('p', { class: 'errorText' }, tr('The storage (network drive) is not available – recording is paused.')));
+    if (sys && sys.storage_low) items.push(el('p', { class: 'errorText' }, tr('The storage is almost full and only recordings around protected events are left. Protect fewer events, keep recordings for a shorter time or free space.')));
+    if (sys && sys.ai_note === 'experimental') items.push(el('p', { class: 'hint' }, tr('The built-in AI is experimental on this machine (ARM, e.g. Raspberry Pi) and may be slow.')));
+    if (sys && sys.storage_local) items.push(el('p', { class: 'errorText' }, tr('The NAS is not responding – recording to the local disk ({gb} GB free). Recordings are moved to the NAS when it is back.', { gb: Math.round(sys.nas.free_gb || 0) })));
+    if (sys) {
+      items.push(el('div', { class: 'rings' }, ring('CPU', sys.cpu_pct, '#3DBE6B'), ring('RAM', sys.mem_pct, '#3DBE6B'), ring(S.ha ? tr('Storage') : 'NAS', sys.nas.used_pct || 0, '#5CC8BB')));
+    }
+    try {
+      const m = await api('/api/mode');
+      const names = m.events_off.map(camName).join(', ');
+      items.push(el('div', { class: 'camRow' }, el('span', { class: 'dot', style: 'background:' + (m.home ? '#F59A3C' : '#5CC8BB') }),
+        el('b', {}, m.home ? tr('Home') : tr('Away')), el('span', {}, m.home ? (names ? tr('no events: {names}', { names: names }) : tr('all cameras active')) : tr('all cameras active'))));
+    } catch (e) { /* */ }
+    items.push(el('h2', { class: 'small' }, tr('Cameras')));
+    const source = (d && d.cameras) || cams || [];
+    for (const c of source) {
+      const on = d ? c.sub_ok : c.online;
+      const info = d ? (c.sub_ok && c.main_ok ? tr('recording') : c.sub_ok ? tr('SD only – {f}', { f: c.main_error ? tr(c.main_error) : tr('HD missing') }) : (c.sub_error || tr('no signal'))) : (on ? tr('online') : tr('no signal'));
+      items.push(el('div', { class: 'camRow' }, el('span', { class: 'dot' + (on ? '' : ' off') }), el('b', {}, c.name), el('span', {}, info)));
+    }
+    if (admin) items.push(el('button', { type: 'button', class: 'btn grey', onclick: () => go('log') }, tr('Show log')));
+    if (sys) items.push(el('div', { class: 'stats' },
+      el('div', {}, tr('Events today'), el('b', {}, sys.events_today)),
+      el('div', {}, S.ha ? tr('Free storage') : tr('Free on NAS'), el('b', {}, Math.round(sys.nas.free_gb || 0) + ' GB'))));
+    content.replaceChildren(...items);
+  }, 5000);
+};
+SCREENS.log = (root, p, ctx) => {
+  const KIND_COLOURS = { error: '#D9483B', ok: '#3DBE6B', alarm: '#F59A3C', user: '#C8C8C8', info: '#5CC8BB' };
+  const filter = el('input', { type: 'search', placeholder: tr('Filter (camera, text, error …)'), 'aria-label': tr('Filter') });
+  const list = el('div');
+  const moreBtn = el('button', { type: 'button', class: 'moreBtn', hidden: true }, tr('Load older'));
+  root.append(topBar(tr('Log'), { back: true }), el('div', { class: 'filters' }, el('label', { class: 'search', html: ICON.search }, filter)),
+    el('div', { class: 'page' }, list, moreBtn));
+  let lines = [];
+  const row = (l) => el('div', { class: 'logRow' },
+    el('span', { class: 'dot', style: 'background:' + (KIND_COLOURS[l.kind] || KIND_COLOURS.info) }),
+    el('div', { class: 'logText' },
+      el('div', { class: 'logHead' }, el('b', {}, camName(l.obj)), el('span', {}, dayName(new Date(l.time).getTime()) + ' ' + fmtTime(new Date(l.time).getTime(), true))),
+      el('div', { class: 'logMsg' }, l.msg)));
+  async function fetchLog(more) {
+    const q = encodeURIComponent(filter.value.trim());
+    const from = more && lines.length ? '&before=' + lines[lines.length - 1].id : '';
+    try {
+      const newItems = await api('/api/log?limit=200&q=' + q + from);
+      lines = more ? lines.concat(newItems) : newItems;
+      list.replaceChildren(...(lines.length ? lines.map(row) : [el('p', { class: 'empty' }, tr('No lines'))]));
+      moreBtn.hidden = newItems.length < 200;
+    } catch (e) { list.replaceChildren(el('p', { class: 'errorText' }, e.message)); }
+  }
+  let t = null;
+  filter.oninput = () => { clearTimeout(t); t = setTimeout(() => fetchLog(false), 300); };
+  moreBtn.onclick = () => fetchLog(true);
+  interval(ctx, () => { if (!filter.value) fetchLog(false); }, 10000);
+};
+function uptime(s) { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return d ? tr('{d} d {h} h', { d, h }) : h ? tr('{h} h {m} m', { h, m }) : tr('{m} min', { m }); }
+
+// Empty slots (null/false) in element lists are skipped instead of being shown as text.
+for (const f of ['append', 'prepend', 'replaceChildren']) {
+  const o = Element.prototype[f];
+  Element.prototype[f] = function (...xs) { return o.apply(this, xs.filter((x) => x !== null && x !== undefined && x !== false)); };
+}
+// ---------- settings: menu with Users, Cameras, General and Log ----------
+const MENU_ICON = {
+  userList: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-2-6-5-6.5"/></svg>',
+  cameras: '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>',
+  general: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg>',
+  log: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h4"/></svg>',
+  storage: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>',
+  network: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="8" rx="1.5"/><path d="M7 7h.01M12 11v5M5 20h14M12 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+  ha: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2"/><path d="M12 16v4M12 12V9"/></svg>',
+  ai: '<svg viewBox="0 0 24 24"><path d="M2 12c3-5 6.5-7 10-7s7 2 10 7c-3 5-6.5 7-10 7s-7-2-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M19 3l.6 1.4L21 5l-1.4.6L19 7l-.6-1.4L17 5l1.4-.6z"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+};
+
+function menuRow(iconHtml, heading2, under, onclick) {
+  return el('button', { type: 'button', class: 'menuRow', onclick },
+    el('span', { class: 'mi', html: iconHtml }),
+    el('span', { class: 'mt' }, el('b', {}, heading2), under ? el('small', {}, under) : null),
+    el('span', { class: 'mp', html: MENU_ICON.arrow }));
+}
+
+function toggleButton(heading2, hint, until, onChange) {
+  const b = el('button', { type: 'button', class: 'toggle', role: 'switch', 'aria-checked': until ? 'true' : 'false',
+    onclick: () => { until = !until; b.setAttribute('aria-checked', until ? 'true' : 'false'); onChange(until); } },
+  el('span', { class: 't' }, el('b', {}, heading2), hint ? el('small', {}, hint) : null), el('span', { class: 'track' }));
+  return b;
+}
+
+function field(label, input, hint) {
+  return el('label', { class: 'field' }, label, input, hint ? el('small', { class: 'hint' }, hint) : null);
+}
+
+SCREENS.settings = (root) => {
+  const admin = S.user && S.user.admin;
+  const content = el('div', { class: 'content' });
+  root.append(topBar(tr('Settings')), el('div', { class: 'page' }, content));
+  if (admin) {
+    content.append(
+      menuRow(MENU_ICON.userList, tr('Users'), tr('Create users, camera access, passwords'), () => go('set_users')),
+      menuRow(MENU_ICON.cameras, tr('Cameras'), tr('Add and edit cameras, motion and AI'), () => go('set_cameras')));
+    if (S.ha) content.append(menuRow(MENU_ICON.storage, tr('Storage'), tr('Where recordings are stored'), () => go('set_storage')));
+  }
+  content.append(menuRow(MENU_ICON.general, tr('General'), tr('Display, my account, app version'), () => go('set_general')));
+  if (admin) content.append(menuRow(MENU_ICON.log, tr('Log'), tr('Everything ArgusSen has done'), () => go('log')));
+};
+
+// ---------- storage (Home Assistant version only) ----------
+// How long recordings are kept, and the space it will take (from the cameras' real file sizes).
+function retentionBox(d, gb) {
+  const rt = d.retention || { sub_days: 14, main_hours: 24, event_days: 30 };
+  const sub = camInput(rt.sub_days, { inputmode: 'numeric' });
+  const main = camInput(rt.main_hours, { inputmode: 'numeric' });
+  const evd = camInput(rt.event_days, { inputmode: 'numeric' });
+  const cur = (d.places || []).find((p) => p.current);
+  const est = el('p', { class: 'hint' });
+  const showEst = (e) => {
+    est.className = 'hint';
+    est.textContent = tr('Expected space: about {gb} for the 24/7 recordings (plus HD around events).', { gb: gb(e) });
+    // the place must also keep its minimum free space (Home Assistant's own disk: 10 %, at least 10 GB)
+    if (cur && d.used_gb >= 0 && e > cur.free_gb + d.used_gb - (d.min_free_gb || 0)) {
+      est.className = 'errorText';
+      est.textContent += ' ' + tr('That is more than there is room for – the oldest recordings will be deleted before they expire.');
+    }
+  };
+  showEst(d.estimate_gb || 0);
+  const status = el('p', { class: 'hint', role: 'status' });
+  // the default follows the storage (Home Assistant's own disk below 128 GB: SD 3 days, HD only around events)
+  const dr = d.default_retention;
+  const defText = el('p', { class: 'hint' });
+  const resetBtn = el('button', { type: 'button', class: 'btn grey' }, tr('Use the default'));
+  const showDefault = (isDefault) => {
+    defText.textContent = dr ? (isDefault ? tr('Default for this storage') + ': ' : tr('The default for this storage would be') + ': ')
+      + tr('SD {sub} days, HD {main} hours, events {ev} days', { sub: dr.sub_days, main: dr.main_hours, ev: dr.event_days }) : '';
+    resetBtn.hidden = isDefault;
+  };
+  showDefault(d.retention_default !== false);
+  resetBtn.onclick = async () => {
+    try {
+      const r = await api('/api/admin/retention', { method: 'PUT', body: { default: true } });
+      sub.value = r.retention.sub_days; main.value = r.retention.main_hours; evd.value = r.retention.event_days;
+      showEst(r.estimate_gb || 0); showDefault(true); status.className = 'ok'; status.textContent = tr('Saved.');
+    } catch (e) { status.className = 'errorText'; status.textContent = e.message; }
+  };
+  return el('div', { style: 'margin-top:16px;display:flex;flex-direction:column;gap:10px' },
+    el('h2', { class: 'small' }, tr('Keep recordings')), defText,
+    el('div', { class: 'to' }, field(tr('Days of 24/7 (SD)'), sub), field(tr('Hours of full resolution (HD)'), main)),
+    field(tr('Days of events'), evd, tr('Events keep their HD video. Protected events are never deleted.')),
+    est,
+    saveButton(tr('Save'), status, async () => {
+      const r = await api('/api/admin/retention', { method: 'PUT', body: { sub_days: +sub.value, main_hours: +main.value, event_days: +evd.value } });
+      showEst(r.estimate_gb || 0); showDefault(r.retention_default);
+    }), status, resetBtn,
+    el('p', { class: 'hint' }, tr('If the storage gets almost full, ArgusSen deletes the oldest recordings first – never those around protected events.')));
+}
+
+SCREENS.set_storage = (root) => {
+  const content = el('div', { class: 'content' });
+  root.append(topBar(tr('Storage'), { back: true }), el('div', { class: 'page' }, content));
+  const status = el('p', { class: 'errorText', role: 'alert' });
+  const gb = (x) => x >= 1000 ? (x / 1000).toFixed(1).replace('.', ',') + ' TB' : Math.round(x) + ' GB';
+  const shown = async () => {
+    let d;
+    try { d = await api('/api/admin/storage'); } catch (e) { content.replaceChildren(el('p', { class: 'errorText' }, e.message)); return; }
+    let selected = d.current;
+    const saveBtn = el('button', { type: 'button', class: 'btn green', disabled: true }, tr('Save and restart ArgusSen'));
+    const row = d.places.map((p) => {
+      const b = el('button', { type: 'button', class: 'menuRow' + (p.path === selected ? ' selected' : ''), disabled: !p.mounted,
+        'aria-pressed': p.path === selected ? 'true' : 'false',
+        onclick: () => {
+          selected = p.path;
+          for (const x of row) { const v = x.dataset.apiPath === selected; x.classList.toggle('selected', v); x.setAttribute('aria-pressed', v ? 'true' : 'false'); }
+          saveBtn.disabled = selected === d.current;
+        } },
+      el('span', { class: 'mi', html: p.type === 'local' ? MENU_ICON.storage : MENU_ICON.network }),
+      el('span', { class: 'mt' }, el('b', {}, (p.type === 'local' ? tr(p.name) : tr('Network drive {n}', { n: p.name.replace(/^Network drive /, '') })) + (p.current ? ' · ' + tr('in use') : '')),
+        el('small', {}, !p.mounted ? tr('Not available right now') : tr('{free} free of {total}', { free: gb(p.free_gb), total: gb(p.total_gb) }) + ' · ' + p.path)));
+      b.dataset.apiPath = p.path;
+      return b;
+    });
+    saveBtn.onclick = async () => {
+      if (!confirm(tr('ArgusSen will restart (about 15 seconds). Recordings in the old location are not moved: they can still be played back and are deleted when they expire. Continue?'))) return;
+      saveBtn.disabled = true; status.className = 'ok'; status.textContent = tr('Saving …');
+      try {
+        const r = await api('/api/admin/storage', { method: 'PUT', body: { path: selected } });
+        if (!r.restart) { shown(); return; }
+        status.textContent = tr('ArgusSen is restarting …');
+        const t0 = Date.now();
+        await new Promise((ok) => setTimeout(ok, 5000));
+        while (Date.now() - t0 < 90000) {
+          try { const x = await fetch(S.server + '/api/me', { cache: 'no-store' }); if (x.ok) { location.reload(); return; } } catch (e) { /* */ }
+          await new Promise((ok) => setTimeout(ok, 2000));
+        }
+        status.className = 'errorText'; status.textContent = tr('ArgusSen is not responding yet – reload the page in a moment.');
+      } catch (e) { status.className = 'errorText'; status.textContent = e.message; saveBtn.disabled = false; }
+    };
+    content.replaceChildren(
+      d.ok ? el('p', { class: 'hint' }, tr('Choose where new recordings are stored.'))
+        : el('p', { class: 'errorText' }, tr('The storage is not available – recording is paused until the network drive is back.')),
+      el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, ...row),
+      el('p', { class: 'hint' }, tr('Network drives (NAS) are added in Home Assistant: Settings → System → Storage → Add network storage, with usage "Media". Recordings are stored in the folder "argus" on the drive.')),
+      saveBtn, status, retentionBox(d, gb));
+  };
+  shown();
+};
+
+SCREENS.set_general = (root) => {
+  const content = el('div', { class: 'content' });
+  root.append(topBar(tr('General'), { back: true }), el('div', { class: 'page' }, content));
+  // language – the page is reloaded so everything is drawn in the new language
+  const langs = Object.entries(LANG_NAMES).filter(([k]) => k !== 'auto');
+  const deviceSelect = el('select', { class: 'select', 'aria-label': tr('Language on this device') },
+    el('option', { value: 'auto' }, tr('Same as ArgusSen ({name})', { name: LANG_NAMES[langCode('auto')] })),
+    ...langs.map(([k, n]) => el('option', { value: k }, n)));
+  deviceSelect.value = load('language', 'auto');
+  deviceSelect.onchange = () => { save('language', deviceSelect.value); location.reload(); };
+  if (S.user && S.user.admin) {
+    // ArgusSen's own language: the app, the log and the names in Home Assistant
+    const appSelect = el('select', { class: 'select', 'aria-label': tr('Language'), disabled: true });
+    const langErr = el('p', { class: 'errorText', role: 'alert' });
+    content.append(el('h2', { class: 'small' }, tr('Language')), appSelect,
+      el('p', { class: 'hint' }, tr('Used for the app, the log and the entity names in Home Assistant.')), langErr);
+    api('/api/language').then((l) => {
+      const autoName = LANG_NAMES[l.auto] || l.auto;
+      appSelect.append(el('option', { value: 'auto' }, l.ha ? tr('Automatic – the language of Home Assistant ({name})', { name: autoName })
+        : tr('Automatic') + ' (' + autoName + ')'), ...langs.map(([k, n]) => el('option', { value: k }, n)));
+      appSelect.value = l.setting; appSelect.disabled = false;
+    }).catch((e) => { langErr.textContent = e.message; });
+    appSelect.onchange = async () => {
+      appSelect.disabled = true;
+      try {
+        const l = await api('/api/admin/language', { method: 'PUT', body: { setting: appSelect.value } });
+        save('serverLanguage', l.language); save('language', 'auto'); location.reload();
+      } catch (e) { langErr.textContent = e.message; appSelect.disabled = false; }
+    };
+    content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Language on this device')), deviceSelect);
+    // camera images to Home Assistant (MQTT): everybody with access to the MQTT broker can read them
+    const haImg = el('div');
+    content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, 'Home Assistant'), haImg);
+    api('/api/admin/ha').then((o) => haImg.replaceChildren(toggleButton(tr('Camera images in Home Assistant'),
+      tr('A still image of each camera and the latest event are sent via MQTT. Everybody with access to the MQTT broker can see them.'), o.images,
+      async (t) => { try { await api('/api/admin/ha', { method: 'PUT', body: { images: t } }); } catch (e) { alert(e.message); } }))).catch(() => {});
+  } else {
+    content.append(el('h2', { class: 'small' }, tr('Language on this device')), deviceSelect);
+  }
+  const opt = (camKey) => (until) => { S.opt[camKey] = until; save('opt', S.opt); };
+  content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Display (this device)')),
+    toggleButton(tr('Show yellow boxes on events'), tr('Frame around person, car … in images'), S.opt.boxes, opt('boxes')),
+    toggleButton(tr('Show boxes in live view'), tr('Draws AI detections on top of the live video'), S.opt.liveBoxes, opt('liveBoxes')),
+    toggleButton(tr('Events in SD on mobile data'), tr('Starts faster and uses less data – tap HD for full resolution'), S.opt.mobileSD, opt('mobileSD')));
+  const errorText = el('p', { class: 'errorText', role: 'alert' });
+  const oldPw = el('input', { type: 'password', autocomplete: 'current-password' });
+  const fresh = el('input', { type: 'password', autocomplete: 'new-password' });
+  const fresh2 = el('input', { type: 'password', autocomplete: 'new-password' });
+  const form = el('form', { class: 'panelBox', hidden: true, onsubmit: async (ev) => {
+    ev.preventDefault();
+    errorText.className = 'errorText'; errorText.textContent = '';
+    if (fresh.value !== fresh2.value) { errorText.textContent = tr('The two new passwords do not match'); return; }
+    try {
+      await api('/api/password', { method: 'POST', body: { old: oldPw.value, new: fresh.value }, noLogout: true });
+      errorText.className = 'ok'; errorText.textContent = tr('Password changed. Other phones have been logged out.');
+      oldPw.value = fresh.value = fresh2.value = '';
+    } catch (e) { errorText.textContent = e.message; }
+  } },
+  field(tr('Current password'), oldPw), field(tr('New password (at least 8 characters)'), fresh), field(tr('New password again'), fresh2),
+  errorText, el('button', { type: 'submit', class: 'btn green' }, tr('Save new password')));
+  if (S.ha) content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('My account') + ' · ' + (S.user ? S.user.name : '')),
+    el('p', { class: 'hint' }, tr('You are logged in through Home Assistant.')));
+  else content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('My account') + ' · ' + (S.user ? S.user.name : '')),
+    el('div', { class: 'to' },
+      el('button', { type: 'button', class: 'btn grey', onclick: () => { form.hidden = !form.hidden; } }, tr('Change password')),
+      el('button', { type: 'button', class: 'btn grey', onclick: () => logout(false) }, tr('Log out'))),
+    form);
+  content.append(
+    el('h2', { class: 'small', style: 'margin-top:8px' }, tr('App')),
+    el('p', { class: 'hint' }, tr('Version') + ' ' + (NATIVE ? NATIVE.versionName() : 'web') + (S.ha ? '' : ' · server ' + S.server.replace(/^https?:\/\//, ''))),
+    el('button', { type: 'button', class: 'btn grey', onclick: () => checkVersion(true) }, tr('Check for update')));
+};
+
+// ---------- users ----------
+SCREENS.set_users = (root, p, ctx) => {
+  const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  root.append(topBar(tr('Users'), { back: true }), el('div', { class: 'page' }, el('div', { class: 'content' },
+    el('button', { type: 'button', class: 'btn green', html: MENU_ICON.plus + tr('Add user'), onclick: () => go('set_user', {}) }), list)));
+  (async () => {
+    try {
+      const [us] = await Promise.all([api('/api/admin/users'), fetchCameras()]);
+      // as Home Assistant app: what new HA users may see (administrators always see everything)
+      const haBox = S.ha ? el('div', { style: 'margin-top:12px;display:flex;flex-direction:column;gap:6px' }) : null;
+      if (S.ha) {
+        try {
+          const o = await api('/api/admin/ha');
+          haBox.append(toggleButton(tr('New Home Assistant users see all cameras'),
+            tr('Otherwise they see no cameras until you choose some here. Home Assistant administrators always see all.'), o.all_cams,
+            async (t) => { try { await api('/api/admin/ha', { method: 'PUT', body: { all_cams: t } }); } catch (e) { alert(e.message); } }));
+        } catch (e) { /* older server */ }
+      }
+      list.replaceChildren(...us.map((u) => menuRow(MENU_ICON.userList, u.name + (u.admin ? ' · admin' : '') + (u.ha ? ' · Home Assistant' : '') + (u.self ? ' (' + tr('you') + ')' : ''),
+        (u.cams.includes('*') ? tr('All cameras') : u.cams.length ? u.cams.map(camName).join(', ') : tr('No cameras')) + ' · ' + tr(u.devices === 1 ? '{n} device' : '{n} devices', { n: u.devices }),
+        () => go('set_user', { name: u.name }))), haBox);
+    } catch (e) { list.replaceChildren(el('p', { class: 'errorText' }, e.message)); }
+  })();
+};
+
+// camera choices: "All cameras" + one choice per camera
+function cameraPicker(selectedSet) {
+  const allItems = allCams();
+  let st = new Set(selectedSet);
+  const box = el('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+  const draw = () => {
+    const isAll = st.has('*');
+    box.replaceChildren(
+      toggleButton(tr('All cameras'), tr('Also cameras added later'), isAll, (until) => { st = until ? new Set(['*']) : new Set(); draw(); }),
+      isAll ? null : el('div', { class: 'chips' }, ...allItems.map((c) => el('button', { type: 'button', class: 'chip' + (st.has(c.id) ? ' selected' : ''),
+        'aria-pressed': st.has(c.id) ? 'true' : 'false', onclick: () => { st.has(c.id) ? st.delete(c.id) : st.add(c.id); draw(); } }, c.name))));
+  };
+  draw();
+  return { el: box, value: () => [...st] };
+}
+let CAMERA_LIST = [];
+const allCams = () => (CAMERA_LIST.length ? CAMERA_LIST : S.cams);
+
+SCREENS.set_user = (root, p) => {
+  const fresh = !p.name;
+  const content = el('div', { class: 'content' });
+  root.append(topBar(fresh ? tr('New user') : p.name, { back: true }), el('div', { class: 'page' }, content));
+  (async () => {
+    let u = { name: '', admin: false, cams: [], self: false };
+    try {
+      CAMERA_LIST = await api('/api/admin/cameras');
+      if (!fresh) u = (await api('/api/admin/users')).find((x) => x.name === p.name) || u;
+    } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; }
+    const name = el('input', { type: 'text', autocapitalize: 'none', value: u.name });
+    const pw = el('input', { type: 'password', autocomplete: 'new-password', placeholder: fresh ? '' : tr('Unchanged') });
+    let admin = u.admin;
+    const kv = cameraPicker(u.cams);
+    const status = el('p', { class: 'hint', role: 'status' });
+    content.append(
+      fresh ? field(tr('Username'), name) : null,
+      field(fresh ? tr('Password (at least 8 characters)') : tr('New password (empty = unchanged)'), pw, fresh ? null : u.ha ? tr('Only needed to log in from the ArgusSen phone app – in Home Assistant the user is already logged in.') : tr('The user\'s phones are logged out when the password changes')),
+      u.self ? el('p', { class: 'hint' }, tr('This is you – your own admin rights cannot be removed.')) :
+        u.ha ? el('p', { class: 'hint' }, tr(u.admin ? 'Administrator in Home Assistant – admin rights are set in Home Assistant.' : 'Not an administrator in Home Assistant – admin rights are set in Home Assistant.')) :
+        toggleButton(tr('Admin'), tr('Can edit cameras, users and settings'), admin, (t) => { admin = t; }),
+      el('h2', { class: 'small', style: 'margin-top:6px' }, tr('May see')), kv.el,
+      el('button', { type: 'button', class: 'btn green', onclick: async () => {
+        status.className = 'hint'; status.textContent = tr('Saving …');
+        try {
+          if (fresh) await api('/api/admin/users', { method: 'POST', body: { name: name.value.trim(), password: pw.value, admin, cams: kv.value() } });
+          else await api('/api/admin/users/' + encodeURIComponent(u.name), { method: 'PUT', body: { admin: u.self || u.ha ? undefined : admin, cams: kv.value(), password: pw.value || undefined } });
+          back();
+        } catch (e) { status.className = 'errorText'; status.textContent = e.message; }
+      } }, fresh ? tr('Create user') : tr('Save')),
+      status);
+    if (!fresh) {
+      content.append(el('div', { class: 'to', style: 'margin-top:10px' },
+        el('button', { type: 'button', class: 'btn grey', onclick: async () => {
+          try { await api('/api/admin/users/' + encodeURIComponent(u.name) + '/logout', { method: 'POST' }); status.className = 'ok'; status.textContent = tr('{name} has been logged out on all devices.', { name: u.name }); } catch (e) { status.textContent = e.message; }
+        } }, tr('Log out everywhere')),
+        u.self ? null : el('button', { type: 'button', class: 'btn grey', onclick: async () => {
+          if (!confirm(tr('Delete the user {name}?', { name: u.name }) + (u.ha ? '\n' + tr('A Home Assistant user comes back the next time it opens ArgusSen (with the cameras new Home Assistant users get). Remove the user in Home Assistant instead.') : ''))) return;
+          try { await api('/api/admin/users/' + encodeURIComponent(u.name), { method: 'DELETE' }); back(); } catch (e) { status.textContent = e.message; }
+        } }, tr('Delete user'))));
+    }
+  })();
+};
+
+// ---------- cameras ----------
+SCREENS.set_cameras = (root) => {
+  const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  root.append(topBar(tr('Cameras'), { back: true }), el('div', { class: 'page' }, el('div', { class: 'content' },
+    el('button', { type: 'button', class: 'btn green', html: MENU_ICON.plus + tr('Add camera'), onclick: () => go('set_cam_conn', {}) }), list)));
+  (async () => {
+    try {
+      CAMERA_LIST = await api('/api/admin/cameras');
+      list.replaceChildren(...CAMERA_LIST.map((c) => {
+        const status = !c.enabled ? tr('disabled') : c.sub_ok ? tr('recording via {m}', { m: (c.main_via || '?') + (c.sub_via && c.sub_via !== c.main_via ? '/' + c.sub_via : '') }) : (c.optional ? tr('switched off') : tr('no connection'));
+        const r = menuRow(MENU_ICON.cameras, c.name, c.host + ' · ' + status, () => go('set_camera', { id: c.id }));
+        r.querySelector('.mi').prepend(el('span', { class: 'dot' + (c.sub_ok || !c.enabled || c.optional ? '' : ' off'), style: 'position:absolute;margin:-14px 0 0 18px' + (!c.enabled ? ';background:#777' : '') }));
+        return r;
+      }));
+    } catch (e) { list.replaceChildren(el('p', { class: 'errorText' }, e.message)); }
+  })();
+};
+
+const METHODS = [
+  ['auto', 'Automatic (bc → rtsp → flv)'], ['bc,flv,rtsp', 'bc, then flv, then rtsp'], ['flv,bc,rtsp', 'flv, then bc, then rtsp'],
+  ['rtsp,bc,flv', 'rtsp, then bc, then flv'], ['rtsp,bc', 'rtsp, then bc'], ['bc', 'bc only'], ['flv', 'flv only'], ['rtsp', 'rtsp only'],
+];
+
+// A camera's settings are split into four sections, each with its own Save button:
+// 1 Connection · 2 Who may see it and operation · 3 Home Assistant · 4 Motion and AI.
+// The server wants all fields on every save, so each section sends the camera's current values + its own changes.
+async function fetchCamera(id) {
+  CAMERA_LIST = await api('/api/admin/cameras');
+  return CAMERA_LIST.find((x) => x.id === id) || null;
+}
+function camBody(c, over) {
+  return Object.assign({ id: c.id, name: c.name, host: c.host, port: c.port || 554, bc_port: c.bc_port || 9000, protos: c.protos,
+    kind: c.kind, onvif_port: c.onvif_port, main_path: c.kind === 'reolink' ? '' : c.main_path, sub_path: c.kind === 'reolink' ? '' : c.sub_path,
+    enabled: c.enabled, optional: c.optional, ha_name: c.ha_name, ha_area: c.ha_area, user: c.user, pass: '' }, over);
+}
+function saveButton(text, status, save) {
+  const k = el('button', { type: 'button', class: 'btn green', style: 'margin-top:8px', onclick: async () => {
+    k.disabled = true; status.className = 'hint'; status.textContent = tr('Saving …');
+    try { await save(); status.className = 'ok'; status.textContent = tr('Saved.'); } catch (e) { status.className = 'errorText'; status.textContent = e.message; }
+    k.disabled = false;
+  } }, text);
+  return k;
+}
+function camPage(root, heading2) {
+  const content = el('div', { class: 'content' });
+  root.append(topBar(heading2, { back: true }), el('div', { class: 'page' }, content));
+  return content;
+}
+const camInput = (v, attrs) => el('input', Object.assign({ type: 'text', class: 'inp', value: v == null ? '' : v, autocapitalize: 'none' }, attrs || {}));
+
+// the menu for one camera (a new camera starts in Connection)
+SCREENS.set_camera = (root, p) => {
+  if (!p.id) { go('set_cam_conn', {}, true); return; }
+  const content = camPage(root, tr('Camera'));
+  (async () => {
+    let c, d = null;
+    try { c = await fetchCamera(p.id); d = await api('/api/settings'); } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; }
+    if (!c) { content.append(el('p', { class: 'errorText' }, tr('The camera does not exist'))); return; }
+    $('.top h1', root).firstChild.textContent = c.name;
+    const methodSelect = c.kind === 'onvif' ? 'ONVIF' : c.kind === 'rtsp' ? 'RTSP' : tr((METHODS.find(([v]) => v === c.protos) || [c.protos, c.protos])[1]);
+    const viewers = c.users.filter((n) => !n.endsWith(' (all)'));
+    const st = d && d.cameras.find((x) => x.id === c.id);
+    content.append(
+      menuRow(MENU_ICON.network, tr('1 · Connection'), c.host + ' · ' + methodSelect, () => go('set_cam_conn', { id: c.id })),
+      menuRow(MENU_ICON.userList, tr('2 · Who may see it and operation'), (c.enabled ? tr('Active') : tr('Disabled')) + (c.optional ? ', ' + tr('may be switched off') : '') + ' · ' + (viewers.length ? viewers.join(', ') : tr('only those who see all')), () => go('set_cam_access', { id: c.id })),
+      menuRow(MENU_ICON.ha, tr('3 · Home Assistant'), (c.ha_name || c.name) + (c.ha_area ? ' · ' + c.ha_area : ''), () => go('set_cam_ha', { id: c.id })),
+      menuRow(MENU_ICON.ai, tr('4 · Motion and AI'), st ? tr('Sensitivity {n}', { n: st.sensitivity }) + ' · ' + (st.objects.length ? st.objects.map(labelName).join(', ') : tr('no events')) : tr('The camera is not running'), () => go('set_cam_ai', { id: c.id })),
+      el('button', { type: 'button', class: 'btn grey', style: 'margin-top:14px', onclick: async () => {
+        if (!confirm(tr('Delete the camera {name}?', { name: c.name }) + '\n' + tr('The recordings stay until they expire (14/30 days).'))) return;
+        try { await api('/api/admin/cameras/' + c.id, { method: 'DELETE' }); await fetchCameras(); back(); } catch (e) { alert(e.message); }
+      } }, tr('Delete camera')));
+  })();
+};
+
+// 1 · Connection (also creating a new camera)
+// Camera types: Reolink (bc/flv/rtsp, optimised), ONVIF (most other brands – the addresses are found by ArgusSen) and
+// RTSP (addresses typed in, with presets for common brands). New cameras can be found with "Search the network".
+const CAM_KINDS = [['reolink', 'Reolink'], ['onvif', 'ONVIF (most other brands)'], ['rtsp', 'RTSP address (manual)']];
+// RTSP paths for common brands: [name, port, main stream, sub stream]
+const RTSP_PRESETS = [
+  ['Hikvision / Annke / HiLook', 554, '/Streaming/Channels/101', '/Streaming/Channels/102'],
+  ['Dahua / Amcrest / Lorex / Imou', 554, '/cam/realmonitor?channel=1&subtype=0', '/cam/realmonitor?channel=1&subtype=1'],
+  ['Axis', 554, '/axis-media/media.amp?videocodec=h264', '/axis-media/media.amp?videocodec=h264&resolution=640x480'],
+  ['TP-Link Tapo / VIGI', 554, '/stream1', '/stream2'],
+  ['Uniview', 554, '/media/video1', '/media/video2'],
+  ['Foscam', 88, '/videoMain', '/videoSub'],
+  ['Ubiquiti UniFi Protect', 7441, '', ''],
+];
+SCREENS.set_cam_conn = (root, p) => {
+  const fresh = !p.id;
+  const content = camPage(root, fresh ? tr('New camera') : tr('Connection'));
+  (async () => {
+    let c = { name: '', host: '', port: 554, bc_port: 9000, protos: 'auto', kind: 'reolink', onvif_port: 80, main_path: '', sub_path: '',
+      enabled: true, optional: false, ha_name: '', ha_area: '', user: 'admin', has_password: false, users: [] };
+    if (!fresh) { try { c = await fetchCamera(p.id) || c; } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; } }
+    if (p.found) Object.assign(c, p.found);
+    const name = camInput(c.name, { autocapitalize: 'sentences' });
+    const host = camInput(c.host, { inputmode: 'url', placeholder: tr('e.g. 192.168.1.20') });
+    const port = camInput(c.port, { inputmode: 'numeric' });
+    const bcport = camInput(c.bc_port, { inputmode: 'numeric' });
+    const onvifPort = camInput(c.onvif_port || 80, { inputmode: 'numeric' });
+    const mainPath = camInput(c.kind === 'reolink' ? '' : c.main_path, { placeholder: '/stream1' });
+    const subPath = camInput(c.kind === 'reolink' ? '' : c.sub_path, { placeholder: '/stream2' });
+    const userField = camInput(c.user);
+    const pw = camInput('', { type: 'password', autocomplete: 'new-password', placeholder: c.has_password ? tr('Unchanged') : '' });
+    const kindSelect = el('select', { class: 'select' }, ...CAM_KINDS.map(([v, t]) => el('option', { value: v }, tr(t))));
+    kindSelect.value = c.kind || 'reolink';
+    const presetSelect = el('select', { class: 'select' }, el('option', { value: '' }, tr('Choose brand …')),
+      ...RTSP_PRESETS.map(([n], i) => el('option', { value: String(i) }, n)), el('option', { value: 'other' }, tr('Other brand')));
+    presetSelect.onchange = () => {
+      const pr = RTSP_PRESETS[+presetSelect.value];
+      if (!pr) return;
+      port.value = pr[1]; mainPath.value = pr[2]; subPath.value = pr[3];
+      if (!pr[2]) mainPath.placeholder = subPath.placeholder = 'rtsps://…';
+    };
+    const methodSelect = el('select', { class: 'select' }, ...METHODS.map(([v, t]) => el('option', { value: v }, tr(t))));
+    if (c.protos && !METHODS.some(([v]) => v === c.protos)) methodSelect.append(el('option', { value: c.protos }, c.protos));
+    methodSelect.value = c.kind === 'reolink' ? (c.protos || 'auto') : 'auto';
+    const over = () => {
+      const k = kindSelect.value;
+      return { name: name.value, host: host.value, port: +port.value || 554, bc_port: +bcport.value || 9000, protos: methodSelect.value,
+        kind: k, onvif_port: +onvifPort.value || 80, main_path: k === 'reolink' ? '' : mainPath.value.trim(), sub_path: k === 'reolink' ? '' : subPath.value.trim(),
+        user: userField.value, pass: pw.value };
+    };
+    const status = el('p', { class: 'hint', role: 'status' });
+    const testResult = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+    const STEP = { onvif: 'ONVIF', main: tr('Main stream'), sub: tr('Sub stream') };
+    const test = el('button', { type: 'button', class: 'btn grey', onclick: async () => {
+      const k = kindSelect.value;
+      test.disabled = true;
+      testResult.replaceChildren(el('p', { class: 'hint' }, k === 'reolink' ? tr('Trying bc, flv and rtsp … (up to 1 minute)') : tr('Testing … (up to 1 minute)')));
+      try {
+        const d = await api('/api/admin/cameras/test', { method: 'POST', body: camBody(c, over()) });
+        const rows = d.results.map((r) => el('div', { class: 'camRow' },
+          el('span', { class: 'dot' + (r.ok ? '' : ' off') }), el('b', {}, STEP[r.proto] || r.proto),
+          el('span', {}, r.ok ? tr('works') + (r.size ? ' · ' + r.size : '') + ' · ' + (r.ms / 1000).toFixed(1) + ' s' : tr(r.error))));
+        const img = d.image ? el('img', { src: d.image, alt: tr('Test image'), style: 'width:100%;border-radius:6px' }) : null;
+        // concrete things to check when something failed
+        const TIPS = {
+          reolink: ['Use the username and password from the Reolink app.', 'In the camera (Reolink app → Settings → Network → Advanced → Server settings): switch on RTSP and HTTPS.', 'Only wired cameras can record 24/7 – battery cameras are not supported.'],
+          onvif: ['ONVIF must be switched on in the camera, often under Network or Integration.', 'Try the other usual ONVIF ports: 80, 8000, 8080, 2020.', 'Some brands (e.g. Hikvision, TP-Link) need a separate ONVIF user, created in the camera.', 'If the camera\'s clock is very wrong, ONVIF login can fail – set the time in the camera.'],
+          rtsp: ['RTSP must be switched on in the camera (often port 554).', 'Check the stream paths in the camera\'s manual – they differ between models.', 'The sub stream must be at most 1280 pixels wide.'],
+        };
+        const tips = d.results.some((x) => !x.ok) ? el('div', { class: 'hint' }, el('b', {}, tr('Things to check:')),
+          el('ul', { style: 'margin:4px 0 0 18px;padding:0' }, ...TIPS[k].map((t) => el('li', {}, tr(t))))) : null;
+        if (k === 'reolink') {
+          testResult.replaceChildren(...rows, img,
+            d.protos ? el('button', { type: 'button', class: 'btn grey', onclick: () => {
+              if (!METHODS.some(([v]) => v === d.protos) && ![...methodSelect.options].some((o) => o.value === d.protos)) methodSelect.append(el('option', { value: d.protos }, d.protos));
+              methodSelect.value = d.protos; status.className = 'ok'; status.textContent = tr('Methods set to: {m} – remember to save.', { m: d.protos });
+            } }, tr('Use the methods that work ({m})', { m: d.protos })) : el('p', { class: 'errorText' }, tr('None of the methods worked – check address, username and password.')), tips);
+        } else {
+          if (d.main_path) { mainPath.value = d.main_path; subPath.value = d.sub_path || ''; }
+          if (k === 'onvif' && d.model && !name.value) name.value = d.model;
+          testResult.replaceChildren(...rows, img,
+            d.warning ? el('p', { class: 'hint' }, tr('The camera does not send H.264. Recording works, but live view and playback need a browser that can show H.265 – choose H.264 in the camera if possible.')) : null,
+            k === 'onvif' && d.main_path ? el('p', { class: 'hint' }, tr('Addresses found: {main} and {sub}', { main: d.main_path, sub: d.sub_path })) : null, tips);
+        }
+      } catch (e) { testResult.replaceChildren(el('p', { class: 'errorText' }, e.message)); }
+      test.disabled = false;
+    } }, tr('Test connection'));
+    // the fields that depend on the camera type
+    const typeFields = el('div', { style: 'display:flex;flex-direction:column;gap:10px' });
+    const shown = () => {
+      const k = kindSelect.value;
+      if (k === 'reolink') {
+        typeFields.replaceChildren(
+          el('div', { class: 'to' }, field(tr('RTSP port'), port), field(tr('Reolink port (bc)'), bcport)),
+          field(tr('Method'), methodSelect, tr('bc = Reolink\'s own protocol, flv = HTTPS-FLV, rtsp = standard. ArgusSen switches to the next one by itself if a method fails.')));
+      } else if (k === 'onvif') {
+        typeFields.replaceChildren(
+          field(tr('ONVIF port'), onvifPort, tr('Often 80, 8000 or 8080. ONVIF must be switched on in the camera – some cameras need a separate ONVIF user.')),
+          el('p', { class: 'hint' }, tr('ArgusSen finds the addresses of the main stream (full resolution) and the sub stream (low resolution) itself – press Test connection.')));
+      } else {
+        typeFields.replaceChildren(
+          field(tr('Brand'), presetSelect, tr('Fills in the usual addresses for the brand – check them in the camera\'s manual if the test fails.')),
+          field(tr('RTSP port'), port),
+          field(tr('Main stream (full resolution)'), mainPath, tr('Path such as /stream1 or a whole address rtsp://…')),
+          field(tr('Sub stream (low resolution)'), subPath, tr('Used for motion detection, the timeline and live view on phones – at most 1280 pixels wide.')));
+      }
+    };
+    kindSelect.onchange = shown;
+    shown();
+    // search the network for cameras (only when creating a new camera)
+    const found = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+    const rangeInput = camInput('', { placeholder: tr('e.g. 192.168.1.0/24'), inputmode: 'url' });
+    const search = el('button', { type: 'button', class: 'btn grey', onclick: async () => {
+      search.disabled = true; found.replaceChildren(el('p', { class: 'hint' }, tr('Searching the network … (about 10 seconds)')));
+      try {
+        const q = rangeInput.value.trim() ? '?range=' + encodeURIComponent(rangeInput.value.trim()) : '';
+        const d = await api('/api/admin/cameras/discover' + q);
+        const list = d.cameras.map((f) => {
+          const label = [f.brand, f.model].filter(Boolean).join(' ') || tr('Unknown camera');
+          const via = f.kind === 'reolink' ? 'Reolink' : f.kind === 'onvif' ? 'ONVIF' : 'RTSP';
+          const row = menuRow(ICON.camera, f.host + ' · ' + label, f.added ? tr('Already added as {name}', { name: f.added }) : via, () => {
+            const k = f.kind === 'reolink' ? 'reolink' : f.kind === 'onvif' ? 'onvif' : 'rtsp';
+            host.value = f.host; kindSelect.value = k; if (f.onvif_port) onvifPort.value = f.onvif_port;
+            shown(); found.replaceChildren(el('p', { class: 'ok' }, tr('{name} chosen – fill in username and password and press Test connection.', { name: f.host })));
+            if (!name.value && f.model) name.value = f.model;
+          });
+          row.disabled = !!f.added;
+          return row;
+        });
+        found.replaceChildren(
+          list.length ? el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, ...list) : el('p', { class: 'hint' }, tr('No cameras found.')),
+          el('p', { class: 'hint' }, tr('Searched: {nets}. If your cameras are on another network (for example a separate camera network/VLAN), type it here – Home Assistant must be able to reach it:', { nets: (d.searched || []).join(', ') })),
+          el('div', { class: 'to' }, rangeInput, el('button', { type: 'button', class: 'btn grey', onclick: () => search.click() }, tr('Search'))));
+      } catch (e) { found.replaceChildren(el('p', { class: 'errorText' }, e.message), el('div', { class: 'to' }, rangeInput, el('button', { type: 'button', class: 'btn grey', onclick: () => search.click() }, tr('Search')))); }
+      search.disabled = false;
+    } }, tr('Search the network for cameras'));
+    content.append(
+      fresh ? search : null, fresh ? found : null,
+      field(tr('Camera type'), kindSelect),
+      field(tr('Name'), name), field(tr('Address (IP or name)'), host),
+      el('div', { class: 'to' }, field(tr('Username'), userField), field(tr('Password'), pw)),
+      typeFields,
+      test, testResult,
+      saveButton(fresh ? tr('Create camera') : tr('Save'), status, async () => {
+        if (fresh) {
+          const r = await api('/api/admin/cameras', { method: 'POST', body: camBody(c, over()) });
+          await fetchCameras();
+          go('set_camera', { id: r.id }, true); // on to the camera's menu
+          return;
+        }
+        Object.assign(c, await api('/api/admin/cameras/' + c.id, { method: 'PUT', body: camBody(c, over()) }));
+        pw.value = ''; pw.placeholder = tr('Unchanged');
+        await fetchCameras();
+      }),
+      status,
+      fresh ? el('p', { class: 'hint' }, tr('Once the camera is created, you can choose who may see it, the Home Assistant name and motion/AI.')) : null);
+  })();
+};
+
+// 2 · Who may see it and operation
+SCREENS.set_cam_access = (root, p) => {
+  const content = camPage(root, tr('Who may see it and operation'));
+  (async () => {
+    let c, userList;
+    try { c = await fetchCamera(p.id); userList = await api('/api/admin/users'); } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; }
+    let enabled = c.enabled, optional = c.optional;
+    const selectedSet = new Set(c.users.filter((n) => !n.endsWith(' (all)')));
+    const others = userList.filter((u) => !u.cams.includes('*'));
+    const seesAll = userList.filter((u) => u.cams.includes('*')).map((u) => u.name);
+    const viewersBox = el('div', { class: 'chips' });
+    const drawViewers = () => viewersBox.replaceChildren(...others.map((u) => el('button', { type: 'button', class: 'chip' + (selectedSet.has(u.name) ? ' selected' : ''),
+      'aria-pressed': selectedSet.has(u.name) ? 'true' : 'false', onclick: () => { selectedSet.has(u.name) ? selectedSet.delete(u.name) : selectedSet.add(u.name); drawViewers(); } }, u.name)));
+    drawViewers();
+    const status = el('p', { class: 'hint', role: 'status' });
+    content.append(
+      el('h2', { class: 'small' }, tr('Who may see the camera')),
+      seesAll.length ? el('p', { class: 'hint' }, tr('Sees all cameras: {names}', { names: seesAll.join(', ') })) : null,
+      others.length ? viewersBox : el('p', { class: 'hint' }, tr('No other users')),
+      el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Operation')),
+      toggleButton(tr('Active'), tr('Records and creates events'), enabled, (t) => { enabled = t; }),
+      toggleButton(tr('May be switched off'), tr('Switched on and off as needed – no alert when it is gone'), optional, (t) => { optional = t; }),
+      saveButton(tr('Save'), status, async () => {
+        Object.assign(c, await api('/api/admin/cameras/' + c.id, { method: 'PUT', body: camBody(c, { enabled, optional, users: [...selectedSet] }) }));
+        await fetchCameras();
+      }),
+      status);
+  })();
+};
+
+// 3 · Home Assistant
+SCREENS.set_cam_ha = (root, p) => {
+  const content = camPage(root, tr('Home Assistant'));
+  (async () => {
+    let c;
+    try { c = await fetchCamera(p.id); } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; }
+    const haName = camInput(c.ha_name, { autocapitalize: 'sentences', placeholder: c.name });
+    const haArea = camInput(c.ha_area, { autocapitalize: 'sentences', placeholder: tr('e.g. Outside') });
+    const status = el('p', { class: 'hint', role: 'status' });
+    content.append(
+      field(tr('Name in Home Assistant'), haName, tr('The device is called "Camera <name>". Empty = the camera\'s name.')),
+      field(tr('Area'), haArea, tr('Suggested area in Home Assistant.')),
+      saveButton(tr('Save'), status, async () => {
+        Object.assign(c, await api('/api/admin/cameras/' + c.id, { method: 'PUT', body: camBody(c, { ha_name: haName.value, ha_area: haArea.value }) }));
+      }),
+      status);
+  })();
+};
+
+// 4 · Motion and AI
+SCREENS.set_cam_ai = (root, p) => {
+  const content = camPage(root, tr('Motion and AI'));
+  motionUI(content, p.id);
+};
+
+// Motion and AI for one camera (saved with the Save button)
+async function motionUI(box, id) {
+  let objNote, objHint; // hint under the objects (set below)
+  let d;
+  try { d = await api('/api/settings'); } catch (e) { box.append(el('p', { class: 'errorText' }, e.message)); return; }
+  const selected = d.cameras.find((x) => x.id === id);
+  if (!selected) { box.append(el('p', { class: 'hint' }, tr('The camera is not running – motion and AI can be changed when it is active.'))); return; }
+  const status = el('p', { class: 'hint', role: 'status' });
+  const send = () => { status.className = 'hint'; status.textContent = tr('Not saved yet.'); };
+  const sliderEl = (heading2, fieldName, min, max, step, device, leftText, right) => {
+    const inp = el('input', { type: 'range', min, max, step, value: selected[fieldName], 'aria-label': heading2 });
+    const tv = el('span', {}, selected[fieldName] + device);
+    inp.oninput = () => { selected[fieldName] = +inp.value; tv.textContent = inp.value + device; send(); };
+    return el('label', { class: 'slider' }, el('span', { class: 't' }, heading2, tv), inp, el('span', { class: 'e' }, el('span', {}, leftText), el('span', {}, right)));
+  };
+  box.append(el('div', { class: 'panelBox' },
+    sliderEl(tr('Motion sensitivity'), 'sensitivity', 1, 10, 1, ' / 10', tr('Only large movements'), tr('Even small movements')),
+    sliderEl(tr('AI confidence'), 'min_confidence', 30, 95, 5, ' %', tr('More events'), tr('Fewer false alarms')),
+    toggleButton(tr('Rotate the image 180°'), tr('If the camera is mounted upside down'), selected.rotate === 180, (t) => { selected.rotate = t ? 180 : 0; send(); }),
+    toggleButton(tr('No events when I am home'), tr('Controlled by your phone via Home Assistant. Still records 24/7'), !!selected.home_off, (t) => { selected.home_off = t; send(); }),
+    sliderEl(tr('Time before the event'), 'pre_seconds', 0, 60, 5, ' s', '0 s', '60 s'),
+    sliderEl(tr('Time after the event'), 'post_seconds', 0, 120, 5, ' s', '0 s', '120 s'),
+    // "Motion" together with AI objects: every motion becomes an event – the AI then only adds what it saw
+    (objNote = el('small', { class: 'hint', style: 'display:block;margin-top:6px' }), objHint = () => {
+      const both = selected.objects.includes('motion') && selected.objects.some((o) => o !== 'motion');
+      objNote.textContent = both ? tr('With Motion chosen, every motion becomes an event – the AI objects only add what was seen. Choose only the objects to let the AI filter out leaves, light and rain.') : '';
+    }, objHint(), null),
+    el('div', { class: 'slider' }, el('span', { class: 't' }, tr('Creates an event')),
+      el('div', { class: 'obj' }, ...d.objects.map((o) => {
+        const b = el('button', { type: 'button', 'aria-pressed': selected.objects.includes(o) ? 'true' : 'false', onclick: () => {
+          selected.objects = selected.objects.includes(o) ? selected.objects.filter((x) => x !== o) : selected.objects.concat(o);
+          b.setAttribute('aria-pressed', selected.objects.includes(o) ? 'true' : 'false'); objHint(); send();
+        } }, labelName(o));
+        return b;
+      })), objNote)),
+  saveButton(tr('Save'), status, async () => {
+    const r = await api('/api/settings/' + id, { method: 'PUT', body: { sensitivity: selected.sensitivity, min_confidence: selected.min_confidence, objects: selected.objects, rotate: selected.rotate || 0, pre_seconds: selected.pre_seconds, post_seconds: selected.post_seconds, home_off: !!selected.home_off } });
+    const kk = S.cams.find((x) => x.id === id); if (kk) { kk.rotate = r.rotate; kk.pre_seconds = r.pre_seconds; kk.post_seconds = r.post_seconds; }
+    Object.assign(selected, r);
+  }), status);
+}
+
+// ---------- login/logout, update ----------
+async function logout(expired) {
+  if (!expired && S.token) { try { await api('/api/logout', { method: 'POST', noLogout: true }); } catch (e) { /* */ } }
+  S.token = ''; save('token', '');
+  NATIVE && NATIVE.login(S.server, '');
+  stack.length = 0;
+  if (active) active.cleanup.forEach((f) => { try { f(); } catch (e) { /* */ } });
+  active = null;
+  go('login', {}, true);
+}
+
+async function checkVersion(showNone) {
+  if (!NATIVE || !S.token) return;
+  try {
+    const v = await api('/api/version');
+    if (v && v.versionCode > NATIVE.versionCode()) updateStatus(tr('New version {v} is ready', { v: v.versionName }), true);
+    else if (showNone) updateStatus(tr('You have the latest version'), false, true);
+  } catch (e) { if (showNone) updateStatus(tr('Could not check: {f}', { f: e.message }), false, true); }
+}
+// also called from Android (Opdatering.java)
+window.updateStatus = (text, btn, hideSoon) => {
+  $('#refresh').hidden = false;
+  $('#refreshText').textContent = text;
+  $('#refreshBtn').hidden = !btn;
+  if (hideSoon) setTimeout(() => { $('#refresh').hidden = true; }, 4000);
+};
+$('#refreshBtn').onclick = () => { updateStatus(tr('Downloading update …'), false); NATIVE && NATIVE.update(); };
+for (const b of document.querySelectorAll('#nav button')) b.onclick = () => navGo(b.dataset.go);
+// the bottom menu and the update button are in index.html – translate their texts
+$('#nav').setAttribute('aria-label', tr('Main menu'));
+for (const n of document.querySelectorAll('#nav button, #refreshBtn')) {
+  for (const x of n.childNodes) if (x.nodeType === 3 && x.textContent.trim()) x.textContent = tr(x.textContent.trim());
+}
+
+// In Home Assistant's sidebar in a phone browser, Home Assistant makes ArgusSen's frame as tall as the whole screen –
+// also the part that the browser's address bar covers. Then the bottom menu lies below the visible area. The frame
+// has the same origin as Home Assistant, so ArgusSen measures how much of it is visible and fits itself to that.
+function fitToVisibleFrame() {
+  const app = document.getElementById('app');
+  try {
+    const frame = window.frameElement;
+    const parent = window.parent;
+    if (!frame || !parent || parent === window) return;
+    const vv = parent.visualViewport;
+    const visibleBottom = vv ? vv.offsetTop + vv.height : parent.innerHeight;
+    const r = frame.getBoundingClientRect();
+    const visible = Math.floor(visibleBottom - Math.max(r.top, 0));
+    app.style.height = visible > 200 && visible < r.height - 1 ? visible + 'px' : '';
+  } catch (e) { app.style.height = ''; } // another origin: nothing to measure
+}
+fitToVisibleFrame();
+try {
+  if (window.frameElement && window.parent !== window) {
+    const pv = window.parent.visualViewport || window.parent;
+    pv.addEventListener('resize', fitToVisibleFrame);
+    pv.addEventListener('scroll', fitToVisibleFrame);
+    window.parent.addEventListener('resize', fitToVisibleFrame);
+  }
+} catch (e) { /* another origin */ }
+window.addEventListener('resize', fitToVisibleFrame);
+
+// When the app is in the background, video and image refresh stop
+window.appPause = () => { if (active) { const { name, p } = active; active.cleanup.forEach((f) => { try { f(); } catch (e) { /* */ } }); active = { name, p, cleanup: [], asleep: true }; } };
+window.appResume = () => { if (active && active.asleep) go(active.name, active.p, true); checkVersion(false); };
+
+// Direct links (e.g. from Home Assistant): #camera/door, #event/123, #events, #status
+function openLink() {
+  // older links used Danish words (from Home Assistant dashboards and the Android app) – they still work
+  const ALIASES = { kamera: 'camera', haendelse: 'event', 'hændelse': 'event', seneste: 'latest', haendelser: 'events' };
+  let [what, id] = decodeURIComponent(location.hash.replace(/^#/, '')).split('/');
+  if (!what) return;
+  what = ALIASES[what] || what;
+  history.replaceState(null, '', location.pathname);
+  if (what === 'camera' && S.cams.some((c) => c.id === id)) go('camera', { cam: id });
+  else if (what === 'event' && +id) go('playback', { id: +id });
+  else if (what === 'latest' && S.cams.some((c) => c.id === id)) {
+    api('/api/events?limit=1&cam=' + encodeURIComponent(id)).then((l) => { if (l.length) go('playback', { id: l[0].id, ev: l[0] }); else go('camera', { cam: id }); }).catch(() => {});
+  }
+  else if (what === 'events' || what === 'status' || what === 'live') navGo(what);
+}
+window.addEventListener('hashchange', () => { if (S.token || S.ha) openLink(); });
+
+// As a Home Assistant app the user is already logged in to HA (ingress) – so no token is needed.
+async function haLogin() {
+  if (!WEB) return false;
+  try {
+    const r = await fetch(S.server + '/api/me', { cache: 'no-store' });
+    if (!r.ok) return false;
+    S.user = (await r.json()).user; S.ha = true;
+    return true;
+  } catch (e) { return false; }
+}
+
+// syncLanguage: remembers ArgusSen's language; if this device follows it and it has changed, the page is reloaded.
+async function syncLanguage() {
+  try {
+    const l = await api('/api/language');
+    if (!l || !LANG_NAMES[l.language]) return false;
+    save('serverLanguage', l.language);
+    if (load('language', 'auto') === 'auto' && l.language !== LANG) {
+      let tried = ''; try { tried = sessionStorage.getItem('argus.langReload') || ''; } catch (e) { /* */ }
+      if (tried !== l.language) {
+        try { sessionStorage.setItem('argus.langReload', l.language); } catch (e) { /* */ }
+        location.reload();
+        return true;
+      }
+    }
+  } catch (e) { /* older server without /api/language */ }
+  return false;
+}
+
+async function start() {
+  if (!S.token && !(await haLogin())) { go('login', {}, true); return; }
+  NATIVE && NATIVE.login(S.server, S.token);
+  try { const me = await api('/api/me'); S.user = me.user; save('user', S.user); } catch (e) { if (e instanceof AuthError) return; }
+  if (await syncLanguage()) return;
+  await fetchCameras();
+  go('overview', {}, true);
+  openLink();
+  fetchEvents();
+  checkVersion(false);
+}
+setInterval(() => checkVersion(false), 30 * 60000);
+start();

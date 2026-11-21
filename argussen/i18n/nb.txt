@@ -1,0 +1,385 @@
+0|I dag
+1|I går
+2|akkurat nå
+3|for {n} min siden
+4|Bevegelse
+5|Ingen forbindelse til serveren
+6|innlogging kreves
+7|Tilbake
+8|BEVEGELSE
+9|Ingen hendelser mens du er hjemme
+10|HJEMME
+11|Slått av
+12|Ingen signal
+13|Åpne {name}
+14|Ny
+15|Beskyttet
+16|LOGG INN
+17|Logger inn …
+18|Innlogging mislyktes
+19|Bruker
+20|Passord
+21|Server
+22|Du forblir innlogget på denne telefonen
+23|KAMERASYSTEM
+24|online
+25|Live
+26|Trykk for å åpne
+27|Siste hendelser
+28|Se alle
+29|{n} av {m} online
+30|Ingen kameraer ennå – legg til ditt første under Innstillinger → Kameraer.
+31|Du har ikke tilgang til noen kameraer ennå.
+32|Ingen hendelser ennå
+33|Søk etter kamera
+34|Hent eldre hendelser
+35|Hendelser
+36|Ingen beskyttede hendelser
+37|Ingen hendelser passer til filteret
+38|Lukk fullskjerm
+39|Henter video …
+40|Denne enheten kan ikke spille av videoen
+41|Ingen opptak her
+42|Kameraet er slått av
+43|Venter på kameraet …
+44|Forbindelsesproblemer – prøver igjen …
+45|Videoen kunne ikke spilles av
+46|Fullskjerm
+47|Avspillingshastighet
+48|Velg dag
+49|Tidslinje – trykk for å spole
+50|Gå til live
+51|Tidslinje
+52|Farget = tatt opp · oransje = hendelse · trykk på linjen for å spole
+53|Hendelser denne dagen
+54|Full oppløsning er ikke lagret her – viser SD
+55|Hendelse
+56|Ingen hendelser
+57|Hendelsen finnes ikke lenger
+58|Pause
+59|Hastighet
+60|10 sekunder tilbake
+61|Nyere hendelse
+62|Eldre hendelse
+63|Oransje = hendelsen · {f} s før og {e} s etter er med · trykk for å spole
+64|Gjenkjent
+65|{p} % sikker
+66|Se live
+67|Åpne tidslinje
+68|Spill av
+69|Opptaket er ikke lenger lagret
+70|Hendelsen og opptaket rundt den blir ikke slettet.
+71|Beskyttelsen er fjernet – slettes etter 30 dager som vanlig.
+72|Last ned video
+73|Laster ned … filen havner i Nedlastinger (se varselet).
+74|Kunne ikke starte nedlastingen.
+75|Laster ned …
+76|Lastet ned.
+77|Slett
+78|Slette hendelsen? Det kan ikke angres.
+79|Status
+80|oppe
+81|Lagringen (nettverksstasjonen) er ikke tilgjengelig – opptaket er satt på pause.
+82|NAS-en svarer ikke – det tas opp på den lokale disken ({gb} GB ledig). Opptakene flyttes til NAS-en når den er tilbake.
+83|Lagring
+84|Hjemme
+85|Borte
+86|ingen hendelser: {names}
+87|alle kameraer aktive
+88|Kameraer
+89|tar opp
+90|bare SD – {f}
+91|HD mangler
+92|ingen signal
+93|Vis logg
+94|Hendelser i dag
+95|Ledig lagring
+96|Ledig på NAS
+97|Filter (kamera, tekst, feil …)
+98|Filter
+99|Hent eldre
+100|Logg
+101|Ingen linjer
+102|{d} d {h} t
+103|{h} t {m} m
+104|{m} min
+105|Innstillinger
+106|Brukere
+107|Opprett brukere, kameratilgang, passord
+108|Legg til og endre kameraer, bevegelse og AI
+109|Hvor opptakene lagres
+110|Generelt
+111|Visning, min konto, appversjon
+112|Alt ArgusSen har gjort
+113|Lagre og start ArgusSen på nytt
+114|Nettverksstasjon {n}
+115|i bruk
+116|Ikke tilgjengelig akkurat nå
+117|{free} ledig av {total}
+118|ArgusSen startes på nytt (ca. 15 sekunder). Opptak på det gamle stedet blir liggende, men vises ikke lenger i ArgusSen. Fortsette?
+119|Lagrer …
+120|ArgusSen starter på nytt …
+121|ArgusSen svarer ikke ennå – last inn siden på nytt om litt.
+122|Velg hvor nye opptak skal lagres.
+123|Lagringen er ikke tilgjengelig – opptaket er satt på pause til nettverksstasjonen er tilbake.
+124|Nettverksstasjoner (NAS) legges til i Home Assistant: Innstillinger → System → Lagring → Legg til nettverkslagring, med bruk "Media". Opptakene legges i mappen "argus" på stasjonen.
+125|Språk
+126|Automatisk
+127|Visning (denne enheten)
+128|Vis gule rammer på hendelser
+129|Ramme rundt person, bil … på bilder
+130|Vis rammer i live
+131|Tegner AI-funn oppå livevideoen
+132|De to nye passordene er ikke like
+133|Passordet er endret. Andre telefoner er logget ut.
+134|Nåværende passord
+135|Nytt passord (minst 8 tegn)
+136|Nytt passord igjen
+137|Lagre nytt passord
+138|Min konto
+139|Du er logget inn via Home Assistant.
+140|Bytt passord
+141|Logg ut
+142|App
+143|Versjon
+144|Se etter oppdatering
+145|Legg til bruker
+146|deg
+147|Alle kameraer
+148|Ingen kameraer
+149|Også kameraer som legges til senere
+150|Ny bruker
+151|Uendret
+152|Brukernavn
+153|Passord (minst 8 tegn)
+154|Nytt passord (tomt = uendret)
+155|Brukerens telefoner logges ut når passordet byttes
+156|Det er deg – dine egne admin-rettigheter kan ikke fjernes.
+157|Admin
+158|Kan endre kameraer, brukere og innstillinger
+159|Kan se
+160|Opprett bruker
+161|Lagre
+162|{name} er logget ut på alle enheter.
+163|Logg ut overalt
+164|Slette brukeren {name}?
+165|Slett bruker
+166|Legg til kamera
+167|slått av
+168|tar opp via {m}
+169|slått av
+170|ingen forbindelse
+171|Lagret.
+172|Kamera
+173|Kameraet finnes ikke
+174|1 · Forbindelse
+175|2 · Hvem kan se og drift
+176|Aktiv
+177|kan være slått av
+178|bare de som ser alle
+179|3 · Home Assistant
+180|4 · Bevegelse og AI
+181|Følsomhet {n}
+182|ingen hendelser
+183|Kameraet kjører ikke
+184|Slette kameraet {name}?
+185|Opptakene blir liggende til de utløper (14/30 dager).
+186|Slett kamera
+187|Nytt kamera
+188|Forbindelse
+189|f.eks. 192.168.1.20
+190|Prøver bc, flv og rtsp … (opptil 1 minutt)
+191|Testbilde
+192|Metoder satt til: {m} – husk å lagre.
+193|Bruk metodene som virker ({m})
+194|Ingen av metodene virket – sjekk adresse, brukernavn og passord.
+195|Test forbindelse
+196|Navn
+197|Adresse (IP eller navn)
+198|RTSP-port
+199|Reolink-port (bc)
+200|Passord
+201|Metode
+202|bc = Reolinks egen protokoll, flv = HTTPS-FLV, rtsp = standard. ArgusSen bytter selv til neste hvis en metode svikter.
+203|Opprett kamera
+204|Når kameraet er opprettet, kan du velge hvem som kan se det, navn i Home Assistant og bevegelse/AI.
+205|Hvem kan se og drift
+206|Hvem kan se kameraet
+207|Ser alle kameraer: {names}
+208|Ingen andre brukere
+209|Drift
+210|Tar opp og lager hendelser
+211|Kan være slått av
+212|Slås av og på etter behov – ingen varsel når det er borte
+213|Home Assistant
+214|f.eks. Utendørs
+215|Navn i Home Assistant
+216|Enheten heter "Kamera <navn>". Tomt = kameraets navn.
+217|Område
+218|Foreslått område i Home Assistant.
+219|Bevegelse og AI
+220|Kameraet kjører ikke – bevegelse og AI kan endres når det er aktivt.
+221|Ikke lagret ennå.
+222|Bevegelsesfølsomhet
+223|Bare store bevegelser
+224|Selv små bevegelser
+225|AI-sikkerhet
+226|Flere hendelser
+227|Færre falske alarmer
+228|Snu bildet 180°
+229|Hvis kameraet henger opp ned
+230|Ingen hendelser når jeg er hjemme
+231|Styres av telefonen din via Home Assistant. Tar fortsatt opp 24/7
+232|Tid før hendelsen
+233|Tid etter hendelsen
+234|Gir hendelse
+235|Ny versjon {v} er klar
+236|Du har den nyeste versjonen
+237|Kunne ikke sjekke: {f}
+238|Henter oppdatering …
+239|Automatisk (bc → rtsp → flv)
+240|bc, så flv, så rtsp
+241|flv, så bc, så rtsp
+242|rtsp, så bc, så flv
+243|rtsp, så bc
+244|Bare bc
+245|Bare flv
+246|Bare rtsp
+247|Person
+248|Bil
+249|Varebil
+250|Sykkel
+251|Alle
+252|Oversikt
+253|Oppdater
+254|Home Assistants egen disk
+255|Nåværende lagring
+256|Beskytt
+257|for {n} time siden
+258|for {n} timer siden
+259|{n} enhet
+260|{n} enheter
+261|Slått av
+262|Hendelser i SD på mobilnett
+263|Starter raskere og bruker mindre data – trykk HD for full oppløsning
+264|bytter metode
+265|stoppet
+266|kameraet lukket forbindelsen
+267|kameraet sendte ingen bildestørrelse
+268|kameraet svarer ikke
+269|ingen video i understrømmen
+270|kunne ikke kjøre på 5 min
+271|feiler med en gang
+272|virker
+273|Automatisk – språket i Home Assistant ({name})
+274|Brukes for appen, loggen og navnene på entitetene i Home Assistant.
+275|Språk på denne enheten
+276|Samme som ArgusSen ({name})
+277|Funne adresser: {main} og {sub}
+278|Allerede lagt til som {name}
+279|ArgusSen finner selv adressene til hovedstrømmen (full oppløsning) og understrømmen (lav oppløsning) – trykk Test tilkoblingen.
+280|Merke
+281|Kameratype
+282|Velg merke …
+283|Fyller inn de vanlige adressene for merket – sjekk dem i kameraets bruksanvisning hvis testen feiler.
+284|Hovedstrøm
+285|Hovedstrøm (full oppløsning)
+286|Ingen kameraer funnet.
+287|ONVIF-port
+288|Ofte 80, 8000 eller 8080. ONVIF må være slått på i kameraet – noen kameraer krever en egen ONVIF-bruker.
+289|Annet merke
+290|Sti som /stream1 eller en hel adresse rtsp://…
+291|Søk
+292|Søk etter kameraer på nettverket
+293|Søkt i: {nets}. Kameraer på et annet nettverk kan finnes ved å angi det her:
+294|Søker på nettverket … (ca. 10 sekunder)
+295|Understrøm
+296|Understrøm (lav oppløsning)
+297|Tester … (opptil 1 minutt)
+298|Kameraet sender ikke H.264. Opptaket virker, men live og avspilling krever en nettleser som kan vise H.265 – velg H.264 i kameraet hvis mulig.
+299|Ukjent kamera
+300|Brukes til bevegelse, tidslinjen og live på telefoner – høyst 1280 piksler bred.
+301|f.eks. 192.168.1.0/24
+302|{name} valgt – fyll inn brukernavn og passord og trykk Test tilkoblingen.
+303|ONVIF (de fleste andre merker)
+304|RTSP-adresse (manuell)
+305|Hovedmeny
+306|En Home Assistant-bruker kommer tilbake neste gang den åpner ArgusSen (med kameraene nye Home Assistant-brukere får). Fjern heller brukeren i Home Assistant.
+307|Et stillbilde fra hvert kamera og den siste hendelsen sendes via MQTT. Alle med tilgang til MQTT-brokeren kan se dem.
+308|ArgusSen starter på nytt (ca. 15 sekunder). Opptak på det gamle stedet flyttes ikke: de kan fortsatt spilles av og slettes når de utløper. Fortsette?
+309|Kamerabilder i Home Assistant
+310|Sjekk strømmenes stier i kameraets bruksanvisning – de varierer mellom modeller.
+311|Dager med 24/7 (SD)
+312|Dager med hendelser
+313|Hendelser beholder HD-videoen sin. Beskyttede hendelser slettes aldri.
+314|Forventet plass: ca. {gb} til 24/7-opptakene (pluss HD rundt hendelser).
+315|Timer med full oppløsning (HD)
+316|Går kameraets klokke mye feil, kan ONVIF-innloggingen feile – still klokken i kameraet.
+317|Blir lagringen nesten full, sletter ArgusSen de eldste opptakene først – aldri dem rundt beskyttede hendelser.
+318|I kameraet (Reolink-appen → Innstillinger → Nettverk → Avansert → Serverinnstillinger): slå på RTSP og HTTPS.
+319|Behold opptak
+320|Nye Home Assistant-brukere ser alle kameraer
+321|ONVIF må være slått på i kameraet, ofte under Nettverk eller Integrasjon.
+322|Bare nødvendig for å logge inn fra ArgusSens mobilapp – i Home Assistant er brukeren allerede logget inn.
+323|Bare kameraer med kabel kan ta opp 24/7 – batterikameraer støttes ikke.
+324|Ellers ser de ingen kameraer før du velger noen her. Home Assistant-administratorer ser alltid alle.
+325|RTSP må være slått på i kameraet (ofte port 554).
+326|Søkt i: {nets}. Er kameraene dine på et annet nettverk (f.eks. et eget kameranettverk/VLAN), skriv det her – Home Assistant må kunne nå det:
+327|Noen merker (f.eks. Hikvision, TP-Link) krever en egen ONVIF-bruker som opprettes i kameraet.
+328|Det er mer enn det er plass til – de eldste opptakene slettes før de utløper.
+329|Den innebygde AI-en er eksperimentell på denne maskinen (ARM, f.eks. Raspberry Pi) og kan være treg.
+330|Lagringen er nesten full, og bare opptak rundt beskyttede hendelser er igjen. Beskytt færre hendelser, behold opptak kortere tid eller frigjør plass.
+331|Understrømmen kan være høyst 1280 piksler bred.
+332|Dette kan du sjekke:
+333|Denne nettleseren kan ikke vise videoen (kameraet sender sannsynligvis H.265). Velg H.264 i kameraet, eller bruk en nettleser som støtter H.265.
+334|Prøv de andre vanlige ONVIF-portene: 80, 8000, 8080, 2020.
+335|Bruk brukernavnet og passordet fra Reolink-appen.
+336|Administrator i Home Assistant – administratorrettigheter styres i Home Assistant.
+337|Ikke administrator i Home Assistant – administratorrettigheter styres i Home Assistant.
+338|Med Bevegelse valgt blir all bevegelse en hendelse – AI-objektene legger bare til hva som ble sett. Velg bare objektene hvis AI-en skal sortere bort blader, lys og regn.
+339|Bruk standarden
+340|Standard for denne lagringen
+341|Standarden for denne lagringen ville vært
+342|SD {sub} dager, HD {main} timer, hendelser {ev} dager
+s0|kun admin
+s1|ugyldig forespørsel
+s2|navn og adresse må fylles ut
+s3|kameraets brukernavn og passord må fylles ut
+s4|kameraet finnes ikke
+s5|ikke noe bilde
+s6|brukernavnet kan ikke være tomt eller inneholde mellomrom
+s7|passordet må være minst 8 tegn
+s8|brukernavnet finnes allerede
+s9|brukeren finnes ikke
+s10|du kan ikke fjerne dine egne admin-rettigheter
+s11|du kan ikke slette deg selv
+s12|for mange feilforsøk – prøv igjen om 15 minutter
+s13|feil brukernavn eller passord
+s14|det nye passordet må være minst 8 tegn
+s15|det nåværende passordet er feil
+s16|kameraet lukket forbindelsen
+s17|kameraet sendte ingen bildestørrelse
+s18|ingen opptak i tidsrommet
+s19|ingen appversjon
+s20|feil nøkkel
+s21|hendelsen finnes ikke
+s22|kun admin kan slette hendelser
+s23|opptaket er ikke lenger lagret
+s24|klippet kunne ikke lages
+s28|stedet finnes ikke eller er ikke tilgjengelig
+s40|fyll inn både hovedstrøm og understrøm
+s41|angi et nettverk som 192.168.1.0/24 (høyst /22)
+s42|fant ikke noe lokalt nettverk
+s43|ONVIF: kameraet har ingen medietjeneste
+s44|ONVIF: kameraet har ingen videoprofiler
+s45|kameraet har bare én strøm – ArgusSen trenger også en understrøm (lav oppløsning)
+s46|strømmens adresse må være en sti eller en rtsp://-adresse uten mellomrom eller innlogging – fyll inn brukernavn og passord i stedet
+s47|ukjent kameratype
+s48|intet bilde – sjekk adresse, brukernavn og passord
+s49|adressen må være en IP-adresse eller et vertsnavn (uten http:// eller port)
+s50|ONVIF: kameraet oppga en adresse som ikke er rtsp://
+s51|administratorrettighetene til en Home Assistant-bruker styres i Home Assistant
+s52|andre klipp lages akkurat nå – prøv igjen om litt
+s53|bare administratorer kan fjerne beskyttelsen
+s54|forespørselen må være JSON
+s55|dager med SD må være 1–365, timer med HD 0–720 og dager med hendelser 1–365

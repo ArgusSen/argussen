@@ -1,0 +1,89 @@
+# Svenska
+1|Användare
+2|omstart: Supervisor svarade %d
+3|omstart: %v
+4|%s bytte lösenord i appen (andra enheter utloggade)
+5|Kamera %s (%s, %s) skapad av %s
+6|Kamera %s ändrad av %s
+7|Kamera %s raderad av %s (inspelningarna ligger kvar till rensningen)
+8|Användare %s skapad av %s
+9|Användare %s ändrad av %s
+10|Användare %s raderad av %s
+11|Användare %s utloggad på alla enheter av %s
+12|Öppnad: %s från %s (%s)
+13|%s/%s: %d avkodningsfel på 10 s – ansluter igen
+14|%s/%s: %s – försöker igen
+15|%s/main: inga data på 90 s – startar om
+16|%s/sub: inspelningen står still – startar om
+17|%s/sub: kameran skickar huvudströmmen på underströmmen (%d MB/min) – ansluter igen
+18|%s/sub: inga bilder på 20 s – startar om
+19|%s: körs (%dx%d)
+20|Kameror: %d flyttade från argus.json till databasen
+21|rensning: %d händelser utan sluttid avslutade
+22|%s: AI-fel: %v
+23|%s: händelse %d bekräftad av AI: %s
+24|%s/%s: byter från %s till %s (%s)
+25|%s/%s: %s fungerar igen – byter tillbaka
+26|MQTT: Home Assistant har startat – skickar discovery igen
+27|Inloggning nekad för %q från %s: %v
+28|Inloggning: %s från %s (%s)
+29|Utloggning: %s från %s
+30|inställningar för %s ändrade av %s: känslighet %d, AI %d %%, objekt %v, rotation %d, före/efter %d/%d s, av när hemma %v
+31|lösenordsbyte nekat för %s: %v
+32|Hemmaläge: %s (satt av %s)
+33|Händelse %d (%s %s) %s av %s
+34|Händelse %d (%s %s) raderad av %s
+35|klipp av händelse %d misslyckades: %v %s
+36|HA: kunde inte kontrollera om %s är administratör: %v
+37|HA: användare %s: %v
+38|Ny användare från Home Assistant: %s (admin: %v)
+39|Öppnad: %s via Home Assistant
+40|Lagring ändrad till %s (%s) av %s – ArgusSen startar om
+41|FEL: NAS:en (%s) svarar inte – spelar in lokalt i %s tills den är tillbaka
+42|NAS:en (%s) är tillbaka – spelar in på NAS:en igen och flyttar över de lokala inspelningarna
+43|FEL: lagringen %s är inte tillgänglig (nätverksenheten svarar inte) – inspelning pausad
+44|Lagringen %s är tillgänglig igen – inspelning återupptagen
+45|FEL: lagringen %s är inte tillgänglig (nätverksenheten är inte monterad) – väntar med att spela in
+46|ArgusSen %s startad: %d kameror, lagring %s, webb %s
+47|MQTT: anslutningen förlorad: %v (försöker igen)
+48|MQTT: ansluten till %s
+49|rensning: %d gamla händelser raderade
+50|Rensning: %d gamla filer/mappar raderade%s
+51|Rensning: inget att göra%s
+52|Lokal lagring: %d filer (%.1f GB) flyttade till NAS:en%s
+53|Lokal lagring: lite utrymme (%.1f GB ledigt) – raderade de äldsta %d HD- och %d SD-filerna (%.1f GB)
+54|HA: %s är nu administratör
+55|HA: %s är inte längre administratör
+56|, %.0f GB ledigt på lokal lagring
+57|, %.0f GB ledigt på NAS:en
+58|stoppar …
+59|MQTT: gamla Home Assistant-enheter (argus) borttagna
+60|databasen ändrad till engelska namn
+61|%s/%s: %s
+62|Språk ändrat till %s av %s
+63|Språk: %s
+64|Språk ändrat till automatiskt (%s) av %s
+65|Kamera %s: vem som får se den kunde inte sparas: %v
+66|%s: händelse %d startad av rörelse
+67|Lagring %s: lite utrymme (%.1f GB ledigt) – raderade de äldsta %d HD- och %d SD-filerna (%.1f GB)
+68|FEL: lagringen är nästan full och bara skyddade inspelningar är kvar – skydda färre händelser eller frigör utrymme
+69|Inspelningar behålls: SD %d dagar, HD %d timmar, händelser %d dagar (satt av %s)
+70|HA: %s är inte administratör – ser de kameror som valts för nya Home Assistant-användare
+71|Home Assistant: kunde inte läsa in Supervisor-integrationen igen: %v
+72|Home Assistant: uppdateringsentiteten för ArgusSen saknades – Supervisor-integrationen lästes in igen
+73|Home Assistant-integration: %v
+74|Home Assistant-integration: discovery svarade HTTP %d
+75|ArgusSen-integrationen %s installerades i Home Assistant
+v1|skyddad
+v2|inte längre skyddad
+v3|hemma
+v4|borta
+v5|stoppade
+v6|byter metod
+v7|har inte kunnat köras på 5 min
+v8|misslyckas direkt
+v9|kameran stängde anslutningen
+v10|kameran skickade ingen bildstorlek
+v11|kameran svarar inte
+v12|ingen video i underströmmen
+v13|appens inställningar

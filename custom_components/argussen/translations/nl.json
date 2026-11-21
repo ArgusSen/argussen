@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ArgusSen-server",
+        "description": "Voor een ArgusSen op een aparte server. De ArgusSen-app voor Home Assistant wordt vanzelf ingesteld.",
+        "data": {
+          "url": "Adres",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "data_description": {
+          "url": "Bijvoorbeeld http://192.168.1.20:8080",
+          "username": "Een ArgusSen-gebruiker (een beheerder voor de thuismodus)"
+        }
+      },
+      "hassio_confirm": {
+        "title": "ArgusSen",
+        "description": "De camera's, gebeurtenissen en opnamen van de ArgusSen-app in Home Assistant instellen?"
+      },
+      "reauth_confirm": {
+        "title": "Opnieuw aanmelden bij ArgusSen",
+        "description": "ArgusSen accepteert de aanmelding niet meer. Meld je aan met een ArgusSen-gebruiker.",
+        "data": {
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Verkeerde gebruikersnaam of wachtwoord",
+      "cannot_connect": "ArgusSen antwoordt niet op dat adres"
+    },
+    "abort": {
+      "already_configured": "Deze ArgusSen is al ingesteld",
+      "cannot_connect": "ArgusSen antwoordt niet",
+      "reauth_successful": "Opnieuw aangemeld"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": {
+        "name": "Beweging"
+      },
+      "connection": {
+        "name": "Verbinding"
+      },
+      "person": {
+        "name": "Persoon"
+      },
+      "car": {
+        "name": "Auto"
+      },
+      "van": {
+        "name": "Bestelwagen"
+      },
+      "bicycle": {
+        "name": "Fiets"
+      },
+      "storage_low": {
+        "name": "Opslag bijna vol"
+      }
+    },
+    "switch": {
+      "home_mode": {
+        "name": "Thuismodus"
+      }
+    },
+    "event": {
+      "detection": {
+        "name": "Detectie",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Persoon",
+              "car": "Auto",
+              "van": "Bestelwagen",
+              "bicycle": "Fiets",
+              "motion": "Beweging"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "latest_event": {
+        "name": "Laatste gebeurtenis"
+      }
+    },
+    "image": {
+      "latest_event_image": {
+        "name": "Afbeelding van laatste gebeurtenis"
+      }
+    }
+  },
+  "exceptions": {
+    "no_server": {
+      "message": "Er is geen ArgusSen-server ingesteld"
+    }
+  },
+  "services": {
+    "protect_event": {
+      "name": "Gebeurtenis beschermen",
+      "description": "Bescherm een ArgusSen-gebeurtenis zodat die nooit wordt verwijderd, of hef de bescherming op.",
+      "fields": {
+        "event_id": {
+          "name": "Gebeurtenis",
+          "description": "Het nummer van de gebeurtenis (event_id in de laatste gebeurtenis of in een argussen_event)."
+        },
+        "protect": {
+          "name": "Beschermen",
+          "description": "Aan = beschermen, uit = bescherming opheffen (alleen beheerders)."
+        },
+        "config_entry_id": {
+          "name": "ArgusSen-server",
+          "description": "Alleen nodig met meer dan één ArgusSen-server."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Live video in Home Assistant",
+        "data": {
+          "stream_quality": "Kwaliteit van live video in camerakaarten"
+        },
+        "data_description": {
+          "stream_quality": "SD is licht (telefoons, mobiele data). HD is volledige resolutie. ArgusSen zelf biedt altijd beide."
+        }
+      }
+    }
+  },
+  "selector": {
+    "stream_quality": {
+      "options": {
+        "sd": "SD – lage resolutie (lichter)",
+        "hd": "HD – volledige resolutie"
+      }
+    }
+  }
+}

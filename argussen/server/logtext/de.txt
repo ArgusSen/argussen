@@ -1,0 +1,89 @@
+# Deutsch
+1|Benutzer
+2|Neustart: Supervisor antwortete %d
+3|Neustart: %v
+4|%s hat das Passwort in der App geändert (andere Geräte abgemeldet)
+5|Kamera %s (%s, %s) erstellt von %s
+6|Kamera %s geändert von %s
+7|Kamera %s gelöscht von %s (Aufnahmen bleiben bis zur Bereinigung)
+8|Benutzer %s erstellt von %s
+9|Benutzer %s geändert von %s
+10|Benutzer %s gelöscht von %s
+11|Benutzer %s auf allen Geräten abgemeldet von %s
+12|Geöffnet: %s von %s (%s)
+13|%s/%s: %d Dekodierfehler in 10 s – verbinde neu
+14|%s/%s: %s – neuer Versuch
+15|%s/main: keine Daten seit 90 s – Neustart
+16|%s/sub: Aufnahme steht still – Neustart
+17|%s/sub: die Kamera sendet den Hauptstream im Substream (%d MB/min) – verbinde neu
+18|%s/sub: keine Bilder seit 20 s – Neustart
+19|%s: läuft (%dx%d)
+20|Kameras: %d aus argus.json in die Datenbank verschoben
+21|Bereinigung: %d Ereignisse ohne Endzeit abgeschlossen
+22|%s: KI-Fehler: %v
+23|%s: Ereignis %d von KI bestätigt: %s
+24|%s/%s: wechsle von %s zu %s (%s)
+25|%s/%s: %s funktioniert wieder – wechsle zurück
+26|MQTT: Home Assistant gestartet – sende Discovery erneut
+27|Anmeldung abgelehnt für %q von %s: %v
+28|Anmeldung: %s von %s (%s)
+29|Abmeldung: %s von %s
+30|Einstellungen für %s geändert von %s: Empfindlichkeit %d, KI %d %%, Objekte %v, Drehung %d, vorher/nachher %d/%d s, aus wenn zu Hause %v
+31|Passwortänderung abgelehnt für %s: %v
+32|Zuhause-Modus: %s (gesetzt von %s)
+33|Ereignis %d (%s %s) %s von %s
+34|Ereignis %d (%s %s) gelöscht von %s
+35|Clip von Ereignis %d fehlgeschlagen: %v %s
+36|HA: konnte nicht prüfen, ob %s Administrator ist: %v
+37|HA: Benutzer %s: %v
+38|Neuer Benutzer aus Home Assistant: %s (Admin: %v)
+39|Geöffnet: %s über Home Assistant
+40|Speicher geändert zu %s (%s) von %s – ArgusSen startet neu
+41|FEHLER: das NAS (%s) antwortet nicht – nehme lokal in %s auf, bis es zurück ist
+42|Das NAS (%s) ist zurück – nehme wieder auf dem NAS auf und verschiebe die lokalen Aufnahmen
+43|FEHLER: Speicher %s ist nicht verfügbar (Netzlaufwerk antwortet nicht) – Aufnahme pausiert
+44|Speicher %s ist wieder verfügbar – Aufnahme fortgesetzt
+45|FEHLER: Speicher %s ist nicht verfügbar (Netzlaufwerk nicht eingebunden) – warte mit der Aufnahme
+46|ArgusSen %s gestartet: %d Kameras, Speicher %s, Web %s
+47|MQTT: Verbindung verloren: %v (neuer Versuch)
+48|MQTT: verbunden mit %s
+49|Bereinigung: %d alte Ereignisse gelöscht
+50|Bereinigung: %d alte Dateien/Ordner gelöscht%s
+51|Bereinigung: nichts zu tun%s
+52|Lokaler Speicher: %d Dateien (%.1f GB) auf das NAS verschoben%s
+53|Lokaler Speicher: wenig Platz (%.1f GB frei) – die ältesten %d HD- und %d SD-Dateien gelöscht (%.1f GB)
+54|HA: %s ist jetzt Administrator
+55|HA: %s ist kein Administrator mehr
+56|, %.0f GB frei auf dem lokalen Speicher
+57|, %.0f GB frei auf dem NAS
+58|stoppe …
+59|MQTT: alte Home-Assistant-Geräte (argus) entfernt
+60|Datenbank auf englische Namen umgestellt
+61|%s/%s: %s
+62|Sprache geändert zu %s von %s
+63|Sprache: %s
+64|Sprache geändert zu automatisch (%s) von %s
+65|Kamera %s: wer sie sehen darf, konnte nicht gespeichert werden: %v
+66|%s: Ereignis %d durch Bewegung gestartet
+67|Speicher %s: wenig Platz (%.1f GB frei) – die ältesten %d HD- und %d SD-Dateien gelöscht (%.1f GB)
+68|FEHLER: der Speicher ist fast voll und nur geschützte Aufnahmen sind übrig – schütze weniger Ereignisse oder schaffe Platz
+69|Aufnahmen werden behalten: SD %d Tage, HD %d Stunden, Ereignisse %d Tage (gesetzt von %s)
+70|HA: %s ist kein Administrator – sieht die für neue Home-Assistant-Benutzer gewählten Kameras
+71|Home Assistant: die Supervisor-Integration konnte nicht neu geladen werden: %v
+72|Home Assistant: die Update-Entität für ArgusSen fehlte – die Supervisor-Integration wurde neu geladen
+73|Home-Assistant-Integration: %v
+74|Home-Assistant-Integration: Discovery antwortete HTTP %d
+75|Die ArgusSen-Integration %s wurde in Home Assistant installiert
+v1|geschützt
+v2|nicht mehr geschützt
+v3|zu Hause
+v4|abwesend
+v5|gestoppt
+v6|wechsle Methode
+v7|konnte 5 min nicht laufen
+v8|schlägt sofort fehl
+v9|die Kamera hat die Verbindung geschlossen
+v10|die Kamera hat keine Bildgröße gesendet
+v11|die Kamera antwortet nicht
+v12|kein Video im Substream
+v13|die App-Optionen

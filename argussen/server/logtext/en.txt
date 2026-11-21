@@ -1,0 +1,90 @@
+# Log texts. en.txt = the English source (format strings as written in the code); other files: same numbers.
+# Numbers starting with v are single values inserted into a line (e.g. "protected").
+1|User
+2|restart: Supervisor answered %d
+3|restart: %v
+4|%s changed password in the app (other devices logged out)
+5|Camera %s (%s, %s) created by %s
+6|Camera %s changed by %s
+7|Camera %s deleted by %s (recordings stay until cleanup)
+8|User %s created by %s
+9|User %s changed by %s
+10|User %s deleted by %s
+11|User %s logged out on all devices by %s
+12|Opened: %s from %s (%s)
+13|%s/%s: %d decoding errors in 10 s – reconnecting
+14|%s/%s: %s – retrying
+15|%s/main: no data for 90 s – restarting
+16|%s/sub: recording has stalled – restarting
+17|%s/sub: the camera sends the main stream on the sub stream (%d MB/min) – reconnecting
+18|%s/sub: no frames for 20 s – restarting
+19|%s: running (%dx%d)
+20|Cameras: %d moved from argus.json to the database
+21|cleanup: %d events without an end time closed
+22|%s: AI error: %v
+23|%s: event %d confirmed by AI: %s
+24|%s/%s: switching from %s to %s (%s)
+25|%s/%s: %s works again – switching back
+26|MQTT: Home Assistant started – sending discovery again
+27|Login refused for %q from %s: %v
+28|Login: %s from %s (%s)
+29|Logout: %s from %s
+30|settings for %s changed by %s: sensitivity %d, AI %d %%, objects %v, rotation %d, before/after %d/%d s, off when home %v
+31|password change refused for %s: %v
+32|Home mode: %s (set by %s)
+33|Event %d (%s %s) %s by %s
+34|Event %d (%s %s) deleted by %s
+35|clip of event %d failed: %v %s
+36|HA: could not check whether %s is an administrator: %v
+37|HA: user %s: %v
+38|New user from Home Assistant: %s (admin: %v)
+39|Opened: %s via Home Assistant
+40|Storage changed to %s (%s) by %s – ArgusSen restarts
+41|ERROR: the NAS (%s) is not responding – recording locally in %s until it is back
+42|The NAS (%s) is back – recording to the NAS again and moving the local recordings over
+43|ERROR: storage %s is not available (network drive not responding) – recording paused
+44|Storage %s is available again – recording resumed
+45|ERROR: storage %s is not available (network drive not mounted) – waiting to record
+46|ArgusSen %s started: %d cameras, storage %s, web %s
+47|MQTT: connection lost: %v (retrying)
+48|MQTT: connected to %s
+49|cleanup: %d old events deleted
+50|Cleanup: %d old files/folders deleted%s
+51|Cleanup: nothing to do%s
+52|Local storage: %d files (%.1f GB) moved to the NAS%s
+53|Local storage: low on space (%.1f GB free) – deleted the oldest %d HD and %d SD files (%.1f GB)
+54|HA: %s is now an administrator
+55|HA: %s is no longer an administrator
+56|, %.0f GB free on local storage
+57|, %.0f GB free on the NAS
+58|stopping …
+59|MQTT: old Home Assistant devices (argus) removed
+60|database migrated to English names
+61|%s/%s: %s
+62|Language changed to %s by %s
+63|Language: %s
+64|Language changed to automatic (%s) by %s
+65|Camera %s: who may see it could not be saved: %v
+66|%s: event %d started by motion
+67|Storage %s: low on space (%.1f GB free) – deleted the oldest %d HD and %d SD files (%.1f GB)
+68|ERROR: the storage is almost full and only protected recordings are left – protect fewer events or free space
+69|Recordings are kept: SD %d days, HD %d hours, events %d days (set by %s)
+70|HA: %s is not an administrator – sees the cameras chosen for new Home Assistant users
+71|Home Assistant: could not reload the Supervisor integration: %v
+72|Home Assistant: the update entity for ArgusSen was missing – the Supervisor integration was reloaded
+73|Home Assistant integration: %v
+74|Home Assistant integration: discovery answered HTTP %d
+75|The ArgusSen integration %s was installed in Home Assistant
+v1|protected
+v2|unprotected
+v3|home
+v4|away
+v5|stopped
+v6|switching method
+v7|could not run for 5 min
+v8|fails immediately
+v9|the camera closed the connection
+v10|the camera sent no image size
+v11|the camera is not responding
+v12|no video in the sub stream
+v13|the app options

@@ -1,0 +1,385 @@
+0|Aujourd'hui
+1|Hier
+2|à l'instant
+3|il y a {n} min
+4|Mouvement
+5|Pas de connexion au serveur
+6|connexion requise
+7|Retour
+8|MOUVEMENT
+9|Aucun événement pendant que vous êtes à la maison
+10|MAISON
+11|Éteinte
+12|Pas de signal
+13|Ouvrir {name}
+14|Nouveau
+15|Protégé
+16|SE CONNECTER
+17|Connexion …
+18|Échec de la connexion
+19|Utilisateur
+20|Mot de passe
+21|Serveur
+22|Vous restez connecté sur ce téléphone
+23|SYSTÈME DE CAMÉRAS
+24|en ligne
+25|Direct
+26|Touchez pour ouvrir
+27|Derniers événements
+28|Tout voir
+29|{n} sur {m} en ligne
+30|Pas encore de caméras – ajoutez la première dans Réglages → Caméras.
+31|Vous n'avez encore accès à aucune caméra.
+32|Pas encore d'événements
+33|Rechercher une caméra
+34|Charger des événements plus anciens
+35|Événements
+36|Aucun événement protégé
+37|Aucun événement ne correspond au filtre
+38|Quitter le plein écran
+39|Chargement de la vidéo …
+40|Cet appareil ne peut pas lire la vidéo
+41|Pas d'enregistrement ici
+42|La caméra est éteinte
+43|En attente de la caméra …
+44|Problème de connexion – nouvel essai …
+45|La vidéo n'a pas pu être lue
+46|Plein écran
+47|Vitesse de lecture
+48|Choisir un jour
+49|Chronologie – touchez pour vous déplacer
+50|Passer au direct
+51|Chronologie
+52|En couleur = enregistré · orange = événement · touchez la ligne pour vous déplacer
+53|Événements de ce jour
+54|La pleine résolution n'est pas conservée ici – affichage en SD
+55|Événement
+56|Aucun événement
+57|L'événement n'existe plus
+58|Pause
+59|Vitesse
+60|Reculer de 10 secondes
+61|Événement plus récent
+62|Événement plus ancien
+63|Orange = l'événement · {f} s avant et {e} s après sont inclus · touchez pour vous déplacer
+64|Détecté
+65|{p} % de certitude
+66|Voir en direct
+67|Ouvrir la chronologie
+68|Lire
+69|L'enregistrement n'est plus conservé
+70|L'événement et l'enregistrement autour ne seront pas supprimés.
+71|Protection retirée – supprimé après 30 jours comme d'habitude.
+72|Télécharger la vidéo
+73|Téléchargement … le fichier arrive dans Téléchargements (voir la notification).
+74|Impossible de lancer le téléchargement.
+75|Téléchargement …
+76|Téléchargé.
+77|Supprimer
+78|Supprimer l'événement ? Cette action est irréversible.
+79|État
+80|en marche depuis
+81|Le stockage (lecteur réseau) n'est pas disponible – l'enregistrement est en pause.
+82|Le NAS ne répond pas – enregistrement sur le disque local ({gb} Go libres). Les enregistrements seront déplacés vers le NAS à son retour.
+83|Stockage
+84|À la maison
+85|Absent
+86|aucun événement : {names}
+87|toutes les caméras actives
+88|Caméras
+89|enregistre
+90|SD uniquement – {f}
+91|HD manquante
+92|pas de signal
+93|Afficher le journal
+94|Événements aujourd'hui
+95|Stockage libre
+96|Libre sur le NAS
+97|Filtre (caméra, texte, erreur …)
+98|Filtre
+99|Charger plus ancien
+100|Journal
+101|Aucune ligne
+102|{d} j {h} h
+103|{h} h {m} min
+104|{m} min
+105|Réglages
+106|Utilisateurs
+107|Créer des utilisateurs, accès aux caméras, mots de passe
+108|Ajouter et modifier des caméras, mouvement et IA
+109|Où les enregistrements sont stockés
+110|Général
+111|Affichage, mon compte, version de l'app
+112|Tout ce que ArgusSen a fait
+113|Enregistrer et redémarrer ArgusSen
+114|Lecteur réseau {n}
+115|utilisé
+116|Indisponible pour le moment
+117|{free} libres sur {total}
+118|ArgusSen va redémarrer (environ 15 secondes). Les enregistrements à l'ancien emplacement y restent mais ne sont plus affichés dans ArgusSen. Continuer ?
+119|Enregistrement …
+120|ArgusSen redémarre …
+121|ArgusSen ne répond pas encore – rechargez la page dans un instant.
+122|Choisissez où stocker les nouveaux enregistrements.
+123|Le stockage n'est pas disponible – l'enregistrement est en pause jusqu'au retour du lecteur réseau.
+124|Les lecteurs réseau (NAS) s'ajoutent dans Home Assistant : Paramètres → Système → Stockage → Ajouter un stockage réseau, avec l'usage « Médias ». Les enregistrements sont placés dans le dossier « argus » du lecteur.
+125|Langue
+126|Automatique
+127|Affichage (cet appareil)
+128|Afficher les cadres jaunes sur les événements
+129|Cadre autour des personnes, voitures … sur les images
+130|Afficher les cadres en direct
+131|Dessine les détections de l'IA sur la vidéo en direct
+132|Les deux nouveaux mots de passe ne correspondent pas
+133|Mot de passe modifié. Les autres téléphones ont été déconnectés.
+134|Mot de passe actuel
+135|Nouveau mot de passe (au moins 8 caractères)
+136|Répéter le nouveau mot de passe
+137|Enregistrer le nouveau mot de passe
+138|Mon compte
+139|Vous êtes connecté via Home Assistant.
+140|Changer le mot de passe
+141|Se déconnecter
+142|App
+143|Version
+144|Rechercher une mise à jour
+145|Ajouter un utilisateur
+146|vous
+147|Toutes les caméras
+148|Aucune caméra
+149|Aussi les caméras ajoutées plus tard
+150|Nouvel utilisateur
+151|Inchangé
+152|Nom d'utilisateur
+153|Mot de passe (au moins 8 caractères)
+154|Nouveau mot de passe (vide = inchangé)
+155|Les téléphones de l'utilisateur sont déconnectés quand le mot de passe change
+156|C'est vous – vos propres droits d'admin ne peuvent pas être retirés.
+157|Admin
+158|Peut modifier les caméras, les utilisateurs et les réglages
+159|Peut voir
+160|Créer l'utilisateur
+161|Enregistrer
+162|{name} a été déconnecté sur tous les appareils.
+163|Déconnecter partout
+164|Supprimer l'utilisateur {name} ?
+165|Supprimer l'utilisateur
+166|Ajouter une caméra
+167|désactivée
+168|enregistre via {m}
+169|éteinte
+170|pas de connexion
+171|Enregistré.
+172|Caméra
+173|La caméra n'existe pas
+174|1 · Connexion
+175|2 · Qui peut voir et fonctionnement
+176|Active
+177|peut être éteinte
+178|seulement ceux qui voient tout
+179|3 · Home Assistant
+180|4 · Mouvement et IA
+181|Sensibilité {n}
+182|aucun événement
+183|La caméra ne fonctionne pas
+184|Supprimer la caméra {name} ?
+185|Les enregistrements restent jusqu'à leur expiration (14/30 jours).
+186|Supprimer la caméra
+187|Nouvelle caméra
+188|Connexion
+189|p. ex. 192.168.1.20
+190|Essai de bc, flv et rtsp … (jusqu'à 1 minute)
+191|Image de test
+192|Méthodes réglées sur : {m} – pensez à enregistrer.
+193|Utiliser les méthodes qui fonctionnent ({m})
+194|Aucune méthode n'a fonctionné – vérifiez l'adresse, le nom d'utilisateur et le mot de passe.
+195|Tester la connexion
+196|Nom
+197|Adresse (IP ou nom)
+198|Port RTSP
+199|Port Reolink (bc)
+200|Mot de passe
+201|Méthode
+202|bc = protocole propre à Reolink, flv = HTTPS-FLV, rtsp = standard. ArgusSen passe tout seul à la suivante si une méthode échoue.
+203|Créer la caméra
+204|Une fois la caméra créée, vous pouvez choisir qui peut la voir, le nom dans Home Assistant et le mouvement/l'IA.
+205|Qui peut voir et fonctionnement
+206|Qui peut voir la caméra
+207|Voit toutes les caméras : {names}
+208|Aucun autre utilisateur
+209|Fonctionnement
+210|Enregistre et crée des événements
+211|Peut être éteinte
+212|Allumée et éteinte selon les besoins – pas d'alerte quand elle est absente
+213|Home Assistant
+214|p. ex. Extérieur
+215|Nom dans Home Assistant
+216|L'appareil s'appelle « Caméra <nom> ». Vide = nom de la caméra.
+217|Pièce
+218|Pièce proposée dans Home Assistant.
+219|Mouvement et IA
+220|La caméra ne fonctionne pas – le mouvement et l'IA pourront être modifiés quand elle sera active.
+221|Pas encore enregistré.
+222|Sensibilité au mouvement
+223|Seulement les grands mouvements
+224|Même les petits mouvements
+225|Certitude de l'IA
+226|Plus d'événements
+227|Moins de fausses alertes
+228|Retourner l'image de 180°
+229|Si la caméra est montée à l'envers
+230|Aucun événement quand je suis à la maison
+231|Piloté par votre téléphone via Home Assistant. Enregistre toujours 24/7
+232|Temps avant l'événement
+233|Temps après l'événement
+234|Déclenche un événement
+235|La nouvelle version {v} est prête
+236|Vous avez la dernière version
+237|Vérification impossible : {f}
+238|Téléchargement de la mise à jour …
+239|Automatique (bc → rtsp → flv)
+240|bc, puis flv, puis rtsp
+241|flv, puis bc, puis rtsp
+242|rtsp, puis bc, puis flv
+243|rtsp, puis bc
+244|bc uniquement
+245|flv uniquement
+246|rtsp uniquement
+247|Personne
+248|Voiture
+249|Camionnette
+250|Vélo
+251|Tous
+252|Aperçu
+253|Mettre à jour
+254|Disque de Home Assistant
+255|Stockage actuel
+256|Protéger
+257|il y a {n} heure
+258|il y a {n} heures
+259|{n} appareil
+260|{n} appareils
+261|Désactivée
+262|Événements en SD sur le réseau mobile
+263|Démarre plus vite et consomme moins de données – touchez HD pour la pleine résolution
+264|changement de méthode
+265|arrêté
+266|la caméra a fermé la connexion
+267|la caméra n'a envoyé aucune taille d'image
+268|la caméra ne répond pas
+269|pas de vidéo dans le flux secondaire
+270|n'a pas pu fonctionner pendant 5 min
+271|échoue immédiatement
+272|fonctionne
+273|Automatique – la langue de Home Assistant ({name})
+274|Utilisée pour l'app, le journal et les noms des entités dans Home Assistant.
+275|Langue sur cet appareil
+276|Comme ArgusSen ({name})
+277|Adresses trouvées : {main} et {sub}
+278|Déjà ajoutée sous le nom {name}
+279|ArgusSen trouve lui-même les adresses du flux principal (pleine résolution) et du flux secondaire (basse résolution) – appuyez sur Tester la connexion.
+280|Marque
+281|Type de caméra
+282|Choisir la marque …
+283|Remplit les adresses habituelles de la marque – vérifiez-les dans le manuel de la caméra si le test échoue.
+284|Flux principal
+285|Flux principal (pleine résolution)
+286|Aucune caméra trouvée.
+287|Port ONVIF
+288|Souvent 80, 8000 ou 8080. ONVIF doit être activé dans la caméra – certaines caméras exigent un utilisateur ONVIF séparé.
+289|Autre marque
+290|Chemin comme /stream1 ou une adresse complète rtsp://…
+291|Rechercher
+292|Rechercher des caméras sur le réseau
+293|Recherché : {nets}. Les caméras d'un autre réseau peuvent être trouvées en l'indiquant ici :
+294|Recherche sur le réseau … (environ 10 secondes)
+295|Flux secondaire
+296|Flux secondaire (basse résolution)
+297|Test … (jusqu'à 1 minute)
+298|La caméra n'envoie pas de H.264. L'enregistrement fonctionne, mais le direct et la lecture nécessitent un navigateur capable d'afficher le H.265 – choisissez H.264 dans la caméra si possible.
+299|Caméra inconnue
+300|Utilisé pour le mouvement, la chronologie et le direct sur téléphone – au plus 1280 pixels de large.
+301|ex. 192.168.1.0/24
+302|{name} choisie – saisissez le nom d'utilisateur et le mot de passe, puis appuyez sur Tester la connexion.
+303|ONVIF (la plupart des autres marques)
+304|Adresse RTSP (manuelle)
+305|Menu principal
+306|Un utilisateur Home Assistant revient la prochaine fois qu'il ouvre ArgusSen (avec les caméras des nouveaux utilisateurs Home Assistant). Supprimez plutôt l'utilisateur dans Home Assistant.
+307|Une image fixe de chaque caméra et le dernier événement sont envoyés via MQTT. Toute personne ayant accès au broker MQTT peut les voir.
+308|ArgusSen redémarre (environ 15 secondes). Les enregistrements de l'ancien emplacement ne sont pas déplacés : ils restent lisibles et sont supprimés à expiration. Continuer ?
+309|Images des caméras dans Home Assistant
+310|Vérifiez les chemins des flux dans le manuel de la caméra – ils varient selon le modèle.
+311|Jours de 24/7 (SD)
+312|Jours d'événements
+313|Les événements gardent leur vidéo HD. Les événements protégés ne sont jamais supprimés.
+314|Espace prévu : environ {gb} pour les enregistrements 24/7 (plus la HD autour des événements).
+315|Heures en pleine résolution (HD)
+316|Si l'horloge de la caméra est très décalée, la connexion ONVIF peut échouer – réglez l'heure dans la caméra.
+317|Si le stockage est presque plein, ArgusSen supprime d'abord les plus anciens enregistrements – jamais ceux autour des événements protégés.
+318|Dans la caméra (app Reolink → Paramètres → Réseau → Avancé → Paramètres du serveur) : activez RTSP et HTTPS.
+319|Conserver les enregistrements
+320|Les nouveaux utilisateurs Home Assistant voient toutes les caméras
+321|ONVIF doit être activé dans la caméra, souvent sous Réseau ou Intégration.
+322|Nécessaire uniquement pour se connecter depuis l'app téléphone ArgusSen – dans Home Assistant, l'utilisateur est déjà connecté.
+323|Seules les caméras filaires peuvent enregistrer 24/7 – les caméras sur batterie ne sont pas prises en charge.
+324|Sinon, ils ne voient aucune caméra tant que vous n'en choisissez pas ici. Les administrateurs Home Assistant voient toujours tout.
+325|RTSP doit être activé dans la caméra (souvent le port 554).
+326|Recherché : {nets}. Si vos caméras sont sur un autre réseau (par exemple un réseau/VLAN dédié aux caméras), indiquez-le ici – Home Assistant doit pouvoir l'atteindre :
+327|Certaines marques (p. ex. Hikvision, TP-Link) exigent un utilisateur ONVIF séparé, créé dans la caméra.
+328|C'est plus que la place disponible – les plus anciens enregistrements seront supprimés avant d'expirer.
+329|L'IA intégrée est expérimentale sur cette machine (ARM, p. ex. Raspberry Pi) et peut être lente.
+330|Le stockage est presque plein et il ne reste que des enregistrements autour d'événements protégés. Protégez moins d'événements, conservez les enregistrements moins longtemps ou libérez de la place.
+331|Le flux secondaire doit faire au plus 1280 pixels de large.
+332|À vérifier :
+333|Ce navigateur ne peut pas afficher cette vidéo (la caméra envoie probablement du H.265). Choisissez H.264 dans la caméra ou utilisez un navigateur compatible H.265.
+334|Essayez les autres ports ONVIF habituels : 80, 8000, 8080, 2020.
+335|Utilisez le nom d'utilisateur et le mot de passe de l'app Reolink.
+336|Administrateur dans Home Assistant – les droits d'administrateur se règlent dans Home Assistant.
+337|Pas administrateur dans Home Assistant – les droits d'administrateur se règlent dans Home Assistant.
+338|Avec Mouvement, chaque mouvement devient un événement – les objets de l'IA ajoutent seulement ce qui a été vu. Choisissez seulement les objets pour que l'IA filtre les feuilles, la lumière et la pluie.
+339|Utiliser la valeur par défaut
+340|Par défaut pour ce stockage
+341|La valeur par défaut pour ce stockage serait
+342|SD {sub} jours, HD {main} heures, événements {ev} jours
+s0|réservé aux admins
+s1|requête invalide
+s2|le nom et l'adresse doivent être renseignés
+s3|le nom d'utilisateur et le mot de passe de la caméra doivent être renseignés
+s4|la caméra n'existe pas
+s5|aucune image
+s6|le nom d'utilisateur ne doit pas être vide ni contenir d'espaces
+s7|le mot de passe doit comporter au moins 8 caractères
+s8|ce nom d'utilisateur existe déjà
+s9|l'utilisateur n'existe pas
+s10|vous ne pouvez pas retirer vos propres droits d'admin
+s11|vous ne pouvez pas vous supprimer vous-même
+s12|trop de tentatives échouées – réessayez dans 15 minutes
+s13|nom d'utilisateur ou mot de passe incorrect
+s14|le nouveau mot de passe doit comporter au moins 8 caractères
+s15|le mot de passe actuel est incorrect
+s16|la caméra a fermé la connexion
+s17|la caméra n'a envoyé aucune taille d'image
+s18|aucun enregistrement sur cette période
+s19|aucune version de l'app
+s20|clé incorrecte
+s21|l'événement n'existe pas
+s22|seuls les admins peuvent supprimer des événements
+s23|l'enregistrement n'est plus conservé
+s24|le clip n'a pas pu être créé
+s28|cet emplacement n'existe pas ou n'est pas disponible
+s40|remplissez le flux principal et le flux secondaire
+s41|indiquez un réseau comme 192.168.1.0/24 (au plus /22)
+s42|aucun réseau local trouvé
+s43|ONVIF : la caméra n'a pas de service média
+s44|ONVIF : la caméra n'a pas de profils vidéo
+s45|la caméra n'a qu'un seul flux – ArgusSen a aussi besoin d'un flux secondaire (basse résolution)
+s46|l'adresse du flux doit être un chemin ou une adresse rtsp://, sans espaces ni identifiants – saisissez plutôt le nom d'utilisateur et le mot de passe
+s47|type de caméra inconnu
+s48|pas d'image – vérifiez l'adresse, le nom d'utilisateur et le mot de passe
+s49|l'adresse doit être une adresse IP ou un nom d'hôte (sans http:// ni port)
+s50|ONVIF : la caméra a indiqué une adresse qui n'est pas rtsp://
+s51|les droits d'administrateur d'un utilisateur Home Assistant se règlent dans Home Assistant
+s52|d'autres clips sont en cours – réessayez dans un instant
+s53|seuls les administrateurs peuvent retirer la protection
+s54|la requête doit être en JSON
+s55|les jours de SD doivent être 1–365, les heures de HD 0–720 et les jours d'événements 1–365

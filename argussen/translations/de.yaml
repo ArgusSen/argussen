@@ -1,0 +1,16 @@
+configuration:
+  ai:
+    name: "KI-Objekterkennung"
+    description: "\"none\" = keine KI (nur Bewegung, keine Ereignisse). \"external\" = eigenen KI-Server (Blue Onyx oder CodeProject.AI) unter der Adresse unten verwenden. \"builtin\" = die eingebaute KI in dieser App ausführen (braucht einen recht schnellen Rechner – getestet auf 64-Bit-PCs, langsam auf einem Raspberry Pi; das Modell wird beim ersten Start heruntergeladen)."
+  ai_url:
+    name: "Externer KI-Server"
+    description: "Nur bei \"external\", z. B. http://192.168.1.10:32168"
+  ai_model:
+    name: "Eingebautes KI-Modell"
+    description: "Nur bei \"builtin\". rf-detr-n (114 MB, am genauesten) oder rt-detrv2-s (76 MB, leichter). Nur das gewählte Modell wird heruntergeladen und ist nicht in Backups enthalten."
+  mqtt:
+    name: "Home-Assistant-Entitäten über MQTT"
+    description: "Der ältere Weg zu Home Assistant (vor der ArgusSen-Integration). Ausgeschaltet lassen – die Integration bietet Kameras mit Live-Video, Sensoren und Ereignisse. Braucht die Mosquitto-Broker-App."
+
+network:
+  8099/tcp: "Direkter Zugriff auf die ArgusSen-API (für Home Assistant nicht nötig – leer lassen)"

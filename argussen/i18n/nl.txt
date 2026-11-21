@@ -1,0 +1,385 @@
+0|Vandaag
+1|Gisteren
+2|zojuist
+3|{n} min geleden
+4|Beweging
+5|Geen verbinding met de server
+6|inloggen vereist
+7|Terug
+8|BEWEGING
+9|Geen gebeurtenissen terwijl je thuis bent
+10|THUIS
+11|Uitgeschakeld
+12|Geen signaal
+13|{name} openen
+14|Nieuw
+15|Beschermd
+16|INLOGGEN
+17|Inloggen …
+18|Inloggen mislukt
+19|Gebruiker
+20|Wachtwoord
+21|Server
+22|Je blijft ingelogd op deze telefoon
+23|CAMERASYSTEEM
+24|online
+25|Live
+26|Tik om te openen
+27|Laatste gebeurtenissen
+28|Alles tonen
+29|{n} van {m} online
+30|Nog geen camera's – voeg je eerste toe via Instellingen → Camera's.
+31|Je hebt nog geen toegang tot camera's.
+32|Nog geen gebeurtenissen
+33|Camera zoeken
+34|Oudere gebeurtenissen laden
+35|Gebeurtenissen
+36|Geen beschermde gebeurtenissen
+37|Geen gebeurtenissen passen bij het filter
+38|Volledig scherm sluiten
+39|Video laden …
+40|Dit apparaat kan de video niet afspelen
+41|Geen opname hier
+42|De camera staat uit
+43|Wachten op de camera …
+44|Verbindingsproblemen – opnieuw proberen …
+45|De video kon niet worden afgespeeld
+46|Volledig scherm
+47|Afspeelsnelheid
+48|Dag kiezen
+49|Tijdlijn – tik om te spoelen
+50|Naar live
+51|Tijdlijn
+52|Gekleurd = opgenomen · oranje = gebeurtenis · tik op de lijn om te spoelen
+53|Gebeurtenissen op deze dag
+54|Volledige resolutie is hier niet bewaard – SD wordt getoond
+55|Gebeurtenis
+56|Geen gebeurtenissen
+57|De gebeurtenis bestaat niet meer
+58|Pauze
+59|Snelheid
+60|10 seconden terug
+61|Nieuwere gebeurtenis
+62|Oudere gebeurtenis
+63|Oranje = de gebeurtenis · {f} s ervoor en {e} s erna zijn inbegrepen · tik om te spoelen
+64|Herkend
+65|{p} % zeker
+66|Live bekijken
+67|Tijdlijn openen
+68|Afspelen
+69|De opname is niet meer bewaard
+70|De gebeurtenis en de opname eromheen worden niet verwijderd.
+71|Bescherming verwijderd – wordt zoals gewoonlijk na 30 dagen verwijderd.
+72|Video downloaden
+73|Downloaden … het bestand komt in Downloads (zie de melding).
+74|Kon het downloaden niet starten.
+75|Downloaden …
+76|Gedownload.
+77|Verwijderen
+78|Gebeurtenis verwijderen? Dit kan niet ongedaan worden gemaakt.
+79|Status
+80|actief
+81|De opslag (netwerkschijf) is niet beschikbaar – de opname is gepauzeerd.
+82|De NAS reageert niet – er wordt opgenomen op de lokale schijf ({gb} GB vrij). De opnames worden naar de NAS verplaatst zodra die terug is.
+83|Opslag
+84|Thuis
+85|Afwezig
+86|geen gebeurtenissen: {names}
+87|alle camera's actief
+88|Camera's
+89|neemt op
+90|alleen SD – {f}
+91|HD ontbreekt
+92|geen signaal
+93|Logboek tonen
+94|Gebeurtenissen vandaag
+95|Vrije opslag
+96|Vrij op NAS
+97|Filter (camera, tekst, fout …)
+98|Filter
+99|Oudere laden
+100|Logboek
+101|Geen regels
+102|{d} d {h} u
+103|{h} u {m} m
+104|{m} min
+105|Instellingen
+106|Gebruikers
+107|Gebruikers aanmaken, cameratoegang, wachtwoorden
+108|Camera's, beweging en AI toevoegen en wijzigen
+109|Waar de opnames worden opgeslagen
+110|Algemeen
+111|Weergave, mijn account, app-versie
+112|Alles wat ArgusSen heeft gedaan
+113|Opslaan en ArgusSen herstarten
+114|Netwerkschijf {n}
+115|in gebruik
+116|Nu niet beschikbaar
+117|{free} vrij van {total}
+118|ArgusSen wordt herstart (ongeveer 15 seconden). Opnames op de oude plek blijven staan, maar worden niet meer getoond in ArgusSen. Doorgaan?
+119|Opslaan …
+120|ArgusSen wordt herstart …
+121|ArgusSen reageert nog niet – laad de pagina zo opnieuw.
+122|Kies waar nieuwe opnames worden opgeslagen.
+123|De opslag is niet beschikbaar – de opname is gepauzeerd tot de netwerkschijf terug is.
+124|Netwerkschijven (NAS) voeg je toe in Home Assistant: Instellingen → Systeem → Opslag → Netwerkopslag toevoegen, met gebruik "Media". De opnames komen in de map "argus" op de schijf.
+125|Taal
+126|Automatisch
+127|Weergave (dit apparaat)
+128|Gele kaders bij gebeurtenissen tonen
+129|Kader rond persoon, auto … op afbeeldingen
+130|Kaders in live tonen
+131|Tekent AI-detecties over de livevideo
+132|De twee nieuwe wachtwoorden komen niet overeen
+133|Wachtwoord gewijzigd. Andere telefoons zijn uitgelogd.
+134|Huidig wachtwoord
+135|Nieuw wachtwoord (minstens 8 tekens)
+136|Nieuw wachtwoord herhalen
+137|Nieuw wachtwoord opslaan
+138|Mijn account
+139|Je bent ingelogd via Home Assistant.
+140|Wachtwoord wijzigen
+141|Uitloggen
+142|App
+143|Versie
+144|Zoeken naar update
+145|Gebruiker toevoegen
+146|jij
+147|Alle camera's
+148|Geen camera's
+149|Ook camera's die later worden toegevoegd
+150|Nieuwe gebruiker
+151|Ongewijzigd
+152|Gebruikersnaam
+153|Wachtwoord (minstens 8 tekens)
+154|Nieuw wachtwoord (leeg = ongewijzigd)
+155|De telefoons van de gebruiker worden uitgelogd als het wachtwoord verandert
+156|Dit ben jij – je eigen beheerdersrechten kunnen niet worden verwijderd.
+157|Beheerder
+158|Kan camera's, gebruikers en instellingen wijzigen
+159|Mag zien
+160|Gebruiker aanmaken
+161|Opslaan
+162|{name} is op alle apparaten uitgelogd.
+163|Overal uitloggen
+164|Gebruiker {name} verwijderen?
+165|Gebruiker verwijderen
+166|Camera toevoegen
+167|uitgeschakeld
+168|neemt op via {m}
+169|uit
+170|geen verbinding
+171|Opgeslagen.
+172|Camera
+173|De camera bestaat niet
+174|1 · Verbinding
+175|2 · Wie mag kijken en werking
+176|Actief
+177|mag uit staan
+178|alleen wie alles ziet
+179|3 · Home Assistant
+180|4 · Beweging en AI
+181|Gevoeligheid {n}
+182|geen gebeurtenissen
+183|De camera draait niet
+184|Camera {name} verwijderen?
+185|De opnames blijven staan tot ze verlopen (14/30 dagen).
+186|Camera verwijderen
+187|Nieuwe camera
+188|Verbinding
+189|bijv. 192.168.1.20
+190|bc, flv en rtsp proberen … (tot 1 minuut)
+191|Testbeeld
+192|Methoden ingesteld op: {m} – vergeet niet op te slaan.
+193|De werkende methoden gebruiken ({m})
+194|Geen van de methoden werkte – controleer adres, gebruikersnaam en wachtwoord.
+195|Verbinding testen
+196|Naam
+197|Adres (IP of naam)
+198|RTSP-poort
+199|Reolink-poort (bc)
+200|Wachtwoord
+201|Methode
+202|bc = Reolinks eigen protocol, flv = HTTPS-FLV, rtsp = standaard. ArgusSen schakelt zelf over naar de volgende als een methode uitvalt.
+203|Camera aanmaken
+204|Zodra de camera is aangemaakt, kun je kiezen wie hem mag zien, de naam in Home Assistant en beweging/AI.
+205|Wie mag kijken en werking
+206|Wie mag de camera zien
+207|Ziet alle camera's: {names}
+208|Geen andere gebruikers
+209|Werking
+210|Neemt op en maakt gebeurtenissen
+211|Mag uit staan
+212|Wordt naar behoefte aan- en uitgezet – geen melding als hij weg is
+213|Home Assistant
+214|bijv. Buiten
+215|Naam in Home Assistant
+216|Het apparaat heet "Camera <naam>". Leeg = naam van de camera.
+217|Ruimte
+218|Voorgestelde ruimte in Home Assistant.
+219|Beweging en AI
+220|De camera draait niet – beweging en AI kunnen worden gewijzigd als hij actief is.
+221|Nog niet opgeslagen.
+222|Bewegingsgevoeligheid
+223|Alleen grote bewegingen
+224|Ook kleine bewegingen
+225|AI-zekerheid
+226|Meer gebeurtenissen
+227|Minder vals alarm
+228|Beeld 180° draaien
+229|Als de camera ondersteboven hangt
+230|Geen gebeurtenissen als ik thuis ben
+231|Bestuurd door je telefoon via Home Assistant. Neemt nog steeds 24/7 op
+232|Tijd vóór de gebeurtenis
+233|Tijd na de gebeurtenis
+234|Geeft gebeurtenis
+235|Nieuwe versie {v} staat klaar
+236|Je hebt de nieuwste versie
+237|Controle mislukt: {f}
+238|Update downloaden …
+239|Automatisch (bc → rtsp → flv)
+240|bc, dan flv, dan rtsp
+241|flv, dan bc, dan rtsp
+242|rtsp, dan bc, dan flv
+243|rtsp, dan bc
+244|Alleen bc
+245|Alleen flv
+246|Alleen rtsp
+247|Persoon
+248|Auto
+249|Bestelwagen
+250|Fiets
+251|Alle
+252|Overzicht
+253|Bijwerken
+254|Eigen schijf van Home Assistant
+255|Huidige opslag
+256|Beschermen
+257|{n} uur geleden
+258|{n} uur geleden
+259|{n} apparaat
+260|{n} apparaten
+261|Uitgeschakeld
+262|Gebeurtenissen in SD via mobiel netwerk
+263|Start sneller en gebruikt minder data – tik op HD voor volledige resolutie
+264|methode wordt gewisseld
+265|gestopt
+266|de camera heeft de verbinding verbroken
+267|de camera stuurde geen beeldgrootte
+268|de camera reageert niet
+269|geen video in de substream
+270|kon 5 min niet draaien
+271|mislukt direct
+272|werkt
+273|Automatisch – de taal van Home Assistant ({name})
+274|Gebruikt voor de app, het logboek en de entiteitnamen in Home Assistant.
+275|Taal op dit apparaat
+276|Zelfde als ArgusSen ({name})
+277|Gevonden adressen: {main} en {sub}
+278|Al toegevoegd als {name}
+279|ArgusSen vindt zelf de adressen van de hoofdstream (volledige resolutie) en de substream (lage resolutie) – druk op Verbinding testen.
+280|Merk
+281|Cameratype
+282|Kies merk …
+283|Vult de gebruikelijke adressen van het merk in – controleer ze in de handleiding van de camera als de test mislukt.
+284|Hoofdstream
+285|Hoofdstream (volledige resolutie)
+286|Geen camera's gevonden.
+287|ONVIF-poort
+288|Vaak 80, 8000 of 8080. ONVIF moet in de camera zijn ingeschakeld – sommige camera's hebben een aparte ONVIF-gebruiker nodig.
+289|Ander merk
+290|Pad zoals /stream1 of een volledig adres rtsp://…
+291|Zoeken
+292|Netwerk doorzoeken naar camera's
+293|Doorzocht: {nets}. Camera's op een ander netwerk vind je door het hier op te geven:
+294|Netwerk doorzoeken … (ongeveer 10 seconden)
+295|Substream
+296|Substream (lage resolutie)
+297|Testen … (tot 1 minuut)
+298|De camera stuurt geen H.264. Opnemen werkt, maar live en afspelen hebben een browser nodig die H.265 kan tonen – kies indien mogelijk H.264 in de camera.
+299|Onbekende camera
+300|Gebruikt voor beweging, de tijdlijn en live op telefoons – hoogstens 1280 pixels breed.
+301|bijv. 192.168.1.0/24
+302|{name} gekozen – vul gebruikersnaam en wachtwoord in en druk op Verbinding testen.
+303|ONVIF (de meeste andere merken)
+304|RTSP-adres (handmatig)
+305|Hoofdmenu
+306|Een Home Assistant-gebruiker komt terug zodra die ArgusSen weer opent (met de camera's die nieuwe Home Assistant-gebruikers krijgen). Verwijder de gebruiker liever in Home Assistant.
+307|Een stilstaand beeld van elke camera en de laatste gebeurtenis worden via MQTT verzonden. Iedereen met toegang tot de MQTT-broker kan ze zien.
+308|ArgusSen herstart (ongeveer 15 seconden). Opnamen op de oude plek worden niet verplaatst: ze blijven afspeelbaar en worden verwijderd als ze verlopen. Doorgaan?
+309|Camerabeelden in Home Assistant
+310|Controleer de streampaden in de handleiding van de camera – ze verschillen per model.
+311|Dagen 24/7 (SD)
+312|Dagen gebeurtenissen
+313|Gebeurtenissen houden hun HD-video. Beschermde gebeurtenissen worden nooit verwijderd.
+314|Verwachte ruimte: ongeveer {gb} voor de 24/7-opnamen (plus HD rond gebeurtenissen).
+315|Uren volledige resolutie (HD)
+316|Loopt de klok van de camera sterk verkeerd, dan kan het ONVIF-aanmelden mislukken – stel de tijd in de camera in.
+317|Als de opslag bijna vol raakt, verwijdert ArgusSen eerst de oudste opnamen – nooit die rond beschermde gebeurtenissen.
+318|In de camera (Reolink-app → Instellingen → Netwerk → Geavanceerd → Serverinstellingen): zet RTSP en HTTPS aan.
+319|Opnamen bewaren
+320|Nieuwe Home Assistant-gebruikers zien alle camera's
+321|ONVIF moet in de camera zijn ingeschakeld, vaak onder Netwerk of Integratie.
+322|Alleen nodig om in te loggen vanuit de ArgusSen-telefoonapp – in Home Assistant is de gebruiker al aangemeld.
+323|Alleen camera's met kabel kunnen 24/7 opnemen – camera's op batterij worden niet ondersteund.
+324|Anders zien ze geen camera's tot je er hier enkele kiest. Home Assistant-beheerders zien altijd alles.
+325|RTSP moet in de camera zijn ingeschakeld (vaak poort 554).
+326|Doorzocht: {nets}. Staan je camera's op een ander netwerk (bijvoorbeeld een apart cameranetwerk/VLAN), vul het hier in – Home Assistant moet het kunnen bereiken:
+327|Sommige merken (bijv. Hikvision, TP-Link) hebben een aparte ONVIF-gebruiker nodig, aan te maken in de camera.
+328|Dat is meer dan er ruimte is – de oudste opnamen worden verwijderd voordat ze verlopen.
+329|De ingebouwde AI is experimenteel op deze machine (ARM, bijv. Raspberry Pi) en kan traag zijn.
+330|De opslag is bijna vol en er zijn alleen opnamen rond beschermde gebeurtenissen over. Bescherm minder gebeurtenissen, bewaar opnamen korter of maak ruimte vrij.
+331|De substream mag hoogstens 1280 pixels breed zijn.
+332|Dit kun je controleren:
+333|Deze browser kan deze video niet tonen (de camera stuurt waarschijnlijk H.265). Kies H.264 in de camera of gebruik een browser die H.265 ondersteunt.
+334|Probeer de andere gebruikelijke ONVIF-poorten: 80, 8000, 8080, 2020.
+335|Gebruik de gebruikersnaam en het wachtwoord uit de Reolink-app.
+336|Beheerder in Home Assistant – beheerdersrechten worden in Home Assistant ingesteld.
+337|Geen beheerder in Home Assistant – beheerdersrechten worden in Home Assistant ingesteld.
+338|Met Beweging gekozen wordt elke beweging een gebeurtenis – de AI-objecten voegen alleen toe wat er gezien werd. Kies alleen de objecten om de AI bladeren, licht en regen te laten wegfilteren.
+339|Standaard gebruiken
+340|Standaard voor deze opslag
+341|De standaard voor deze opslag zou zijn
+342|SD {sub} dagen, HD {main} uur, gebeurtenissen {ev} dagen
+s0|alleen voor beheerders
+s1|ongeldig verzoek
+s2|naam en adres moeten worden ingevuld
+s3|gebruikersnaam en wachtwoord van de camera moeten worden ingevuld
+s4|de camera bestaat niet
+s5|geen beeld
+s6|de gebruikersnaam mag niet leeg zijn of spaties bevatten
+s7|het wachtwoord moet minstens 8 tekens hebben
+s8|de gebruikersnaam bestaat al
+s9|de gebruiker bestaat niet
+s10|je kunt je eigen beheerdersrechten niet verwijderen
+s11|je kunt jezelf niet verwijderen
+s12|te veel mislukte pogingen – probeer het over 15 minuten opnieuw
+s13|verkeerde gebruikersnaam of verkeerd wachtwoord
+s14|het nieuwe wachtwoord moet minstens 8 tekens hebben
+s15|het huidige wachtwoord is onjuist
+s16|de camera heeft de verbinding verbroken
+s17|de camera stuurde geen beeldgrootte
+s18|geen opname in deze periode
+s19|geen app-versie
+s20|verkeerde sleutel
+s21|de gebeurtenis bestaat niet
+s22|alleen beheerders kunnen gebeurtenissen verwijderen
+s23|de opname is niet meer bewaard
+s24|de clip kon niet worden gemaakt
+s28|deze locatie bestaat niet of is niet beschikbaar
+s40|vul zowel de hoofdstream als de substream in
+s41|geef een netwerk zoals 192.168.1.0/24 op (hoogstens /22)
+s42|geen lokaal netwerk gevonden
+s43|ONVIF: de camera heeft geen mediadienst
+s44|ONVIF: de camera heeft geen videoprofielen
+s45|de camera heeft maar één stream – ArgusSen heeft ook een substream (lage resolutie) nodig
+s46|het streamadres moet een pad of een rtsp://-adres zijn, zonder spaties of inloggegevens – vul in plaats daarvan gebruikersnaam en wachtwoord in
+s47|onbekend cameratype
+s48|geen beeld – controleer adres, gebruikersnaam en wachtwoord
+s49|het adres moet een IP-adres of een hostnaam zijn (zonder http:// of poort)
+s50|ONVIF: de camera gaf een adres op dat geen rtsp:// is
+s51|de beheerdersrechten van een Home Assistant-gebruiker worden in Home Assistant ingesteld
+s52|er worden nu andere clips gemaakt – probeer het zo opnieuw
+s53|alleen beheerders kunnen de bescherming opheffen
+s54|het verzoek moet JSON zijn
+s55|dagen SD moeten 1–365 zijn, uren HD 0–720 en dagen gebeurtenissen 1–365

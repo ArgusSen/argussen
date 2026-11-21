@@ -1,0 +1,19 @@
+{
+  "domain": "argussen",
+  "name": "ArgusSen",
+  "after_dependencies": [
+    "hassio",
+    "media_source"
+  ],
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [
+    "http"
+  ],
+  "documentation": "https://github.com/ArgusSen/argussen",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/ArgusSen/argussen/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

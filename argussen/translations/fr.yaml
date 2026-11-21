@@ -1,0 +1,16 @@
+configuration:
+  ai:
+    name: "Détection d'objets par IA"
+    description: "\"none\" = pas d'IA (mouvement uniquement, pas d'événements). \"external\" = utiliser votre propre serveur IA (Blue Onyx ou CodeProject.AI) à l'adresse ci-dessous. \"builtin\" = exécuter l'IA intégrée dans cette app (demande une machine assez rapide – testé sur PC 64 bits, lent sur un Raspberry Pi ; le modèle est téléchargé au premier démarrage)."
+  ai_url:
+    name: "Serveur IA externe"
+    description: "Seulement pour \"external\", p. ex. http://192.168.1.10:32168"
+  ai_model:
+    name: "Modèle IA intégré"
+    description: "Seulement pour \"builtin\". rf-detr-n (114 Mo, le plus précis) ou rt-detrv2-s (76 Mo, plus léger). Seul le modèle choisi est téléchargé et il n'est pas inclus dans les sauvegardes."
+  mqtt:
+    name: "Entités Home Assistant via MQTT"
+    description: "L'ancienne voie vers Home Assistant (avant l'intégration ArgusSen). Laissez désactivé – l'intégration fournit des caméras avec vidéo en direct, des capteurs et des événements. Nécessite l'app Mosquitto broker."
+
+network:
+  8099/tcp: "Accès direct à l'API de ArgusSen (inutile pour Home Assistant – laisser vide)"

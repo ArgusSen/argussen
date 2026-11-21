@@ -1,0 +1,13 @@
+diff --git a/src/server.rs b/src/server.rs
+index cf5fc89..3cbc187 100644
+--- a/src/server.rs
++++ b/src/server.rs
+@@ -143,7 +143,7 @@ pub async fn run_server(
+         .with_state(server_state.clone())
+         .layer(DefaultBodyLimit::max(THIRTY_MEGABYTES));
+ 
+-    let addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port);
++    let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), port);
+     info!("Starting server, listening on {}", addr);
+     info!("Welcome page, http://127.0.0.1:{}", port);
+     let listener = match tokio::net::TcpListener::bind(addr).await {

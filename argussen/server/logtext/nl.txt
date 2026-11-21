@@ -1,0 +1,89 @@
+# Nederlands
+1|Gebruiker
+2|herstart: Supervisor antwoordde %d
+3|herstart: %v
+4|%s heeft het wachtwoord gewijzigd in de app (andere apparaten afgemeld)
+5|Camera %s (%s, %s) aangemaakt door %s
+6|Camera %s gewijzigd door %s
+7|Camera %s verwijderd door %s (opnamen blijven tot het opruimen)
+8|Gebruiker %s aangemaakt door %s
+9|Gebruiker %s gewijzigd door %s
+10|Gebruiker %s verwijderd door %s
+11|Gebruiker %s op alle apparaten afgemeld door %s
+12|Geopend: %s vanaf %s (%s)
+13|%s/%s: %d decodeerfouten in 10 s – opnieuw verbinden
+14|%s/%s: %s – nieuwe poging
+15|%s/main: geen gegevens in 90 s – herstart
+16|%s/sub: opname staat stil – herstart
+17|%s/sub: de camera stuurt de hoofdstream op de substream (%d MB/min) – opnieuw verbinden
+18|%s/sub: geen beelden in 20 s – herstart
+19|%s: actief (%dx%d)
+20|Camera's: %d verplaatst van argus.json naar de database
+21|opruimen: %d gebeurtenissen zonder eindtijd afgesloten
+22|%s: AI-fout: %v
+23|%s: gebeurtenis %d bevestigd door AI: %s
+24|%s/%s: overschakelen van %s naar %s (%s)
+25|%s/%s: %s werkt weer – terugschakelen
+26|MQTT: Home Assistant gestart – discovery opnieuw verzonden
+27|Aanmelding geweigerd voor %q vanaf %s: %v
+28|Aanmelding: %s vanaf %s (%s)
+29|Afmelding: %s vanaf %s
+30|instellingen voor %s gewijzigd door %s: gevoeligheid %d, AI %d %%, objecten %v, rotatie %d, voor/na %d/%d s, uit als thuis %v
+31|wachtwoordwijziging geweigerd voor %s: %v
+32|Thuismodus: %s (ingesteld door %s)
+33|Gebeurtenis %d (%s %s) %s door %s
+34|Gebeurtenis %d (%s %s) verwijderd door %s
+35|clip van gebeurtenis %d mislukt: %v %s
+36|HA: kon niet controleren of %s beheerder is: %v
+37|HA: gebruiker %s: %v
+38|Nieuwe gebruiker uit Home Assistant: %s (beheerder: %v)
+39|Geopend: %s via Home Assistant
+40|Opslag gewijzigd naar %s (%s) door %s – ArgusSen herstart
+41|FOUT: de NAS (%s) reageert niet – lokaal opnemen in %s tot hij terug is
+42|De NAS (%s) is terug – weer opnemen op de NAS en de lokale opnamen verplaatsen
+43|FOUT: opslag %s is niet beschikbaar (netwerkschijf reageert niet) – opname gepauzeerd
+44|Opslag %s is weer beschikbaar – opname hervat
+45|FOUT: opslag %s is niet beschikbaar (netwerkschijf niet gekoppeld) – wacht met opnemen
+46|ArgusSen %s gestart: %d camera's, opslag %s, web %s
+47|MQTT: verbinding verbroken: %v (nieuwe poging)
+48|MQTT: verbonden met %s
+49|opruimen: %d oude gebeurtenissen verwijderd
+50|Opruimen: %d oude bestanden/mappen verwijderd%s
+51|Opruimen: niets te doen%s
+52|Lokale opslag: %d bestanden (%.1f GB) naar de NAS verplaatst%s
+53|Lokale opslag: weinig ruimte (%.1f GB vrij) – de oudste %d HD- en %d SD-bestanden verwijderd (%.1f GB)
+54|HA: %s is nu beheerder
+55|HA: %s is geen beheerder meer
+56|, %.0f GB vrij op lokale opslag
+57|, %.0f GB vrij op de NAS
+58|stoppen …
+59|MQTT: oude Home Assistant-apparaten (argus) verwijderd
+60|database omgezet naar Engelse namen
+61|%s/%s: %s
+62|Taal gewijzigd naar %s door %s
+63|Taal: %s
+64|Taal gewijzigd naar automatisch (%s) door %s
+65|Camera %s: wie hem mag zien kon niet worden opgeslagen: %v
+66|%s: gebeurtenis %d gestart door beweging
+67|Opslag %s: weinig ruimte (%.1f GB vrij) – de oudste %d HD- en %d SD-bestanden verwijderd (%.1f GB)
+68|FOUT: de opslag is bijna vol en er zijn alleen beschermde opnamen over – bescherm minder gebeurtenissen of maak ruimte vrij
+69|Opnamen worden bewaard: SD %d dagen, HD %d uur, gebeurtenissen %d dagen (ingesteld door %s)
+70|HA: %s is geen beheerder – ziet de camera's die voor nieuwe Home Assistant-gebruikers gekozen zijn
+71|Home Assistant: kon de Supervisor-integratie niet opnieuw laden: %v
+72|Home Assistant: de update-entiteit voor ArgusSen ontbrak – de Supervisor-integratie is opnieuw geladen
+73|Home Assistant-integratie: %v
+74|Home Assistant-integratie: discovery antwoordde HTTP %d
+75|De ArgusSen-integratie %s is in Home Assistant geïnstalleerd
+v1|beschermd
+v2|niet meer beschermd
+v3|thuis
+v4|afwezig
+v5|gestopt
+v6|wisselt van methode
+v7|kon 5 min niet draaien
+v8|mislukt meteen
+v9|de camera heeft de verbinding gesloten
+v10|de camera stuurde geen beeldgrootte
+v11|de camera reageert niet
+v12|geen video in de substream
+v13|de app-opties

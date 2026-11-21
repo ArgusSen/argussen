@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ArgusSen-server",
+        "description": "För en ArgusSen som körs på en separat server. ArgusSen-appen för Home Assistant konfigureras av sig själv.",
+        "data": {
+          "url": "Adress",
+          "username": "Användarnamn",
+          "password": "Lösenord"
+        },
+        "data_description": {
+          "url": "Till exempel http://192.168.1.20:8080",
+          "username": "En ArgusSen-användare (en administratör för hemmaläget)"
+        }
+      },
+      "hassio_confirm": {
+        "title": "ArgusSen",
+        "description": "Konfigurera ArgusSen-appens kameror, händelser och inspelningar i Home Assistant?"
+      },
+      "reauth_confirm": {
+        "title": "Logga in på ArgusSen igen",
+        "description": "ArgusSen accepterar inte längre inloggningen. Logga in med en ArgusSen-användare.",
+        "data": {
+          "username": "Användarnamn",
+          "password": "Lösenord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Fel användarnamn eller lösenord",
+      "cannot_connect": "ArgusSen svarar inte på den adressen"
+    },
+    "abort": {
+      "already_configured": "Den här ArgusSen är redan konfigurerad",
+      "cannot_connect": "ArgusSen svarar inte",
+      "reauth_successful": "Inloggad igen"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": {
+        "name": "Rörelse"
+      },
+      "connection": {
+        "name": "Anslutning"
+      },
+      "person": {
+        "name": "Person"
+      },
+      "car": {
+        "name": "Bil"
+      },
+      "van": {
+        "name": "Skåpbil"
+      },
+      "bicycle": {
+        "name": "Cykel"
+      },
+      "storage_low": {
+        "name": "Lagringen nästan full"
+      }
+    },
+    "switch": {
+      "home_mode": {
+        "name": "Hemmaläge"
+      }
+    },
+    "event": {
+      "detection": {
+        "name": "Detektering",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Person",
+              "car": "Bil",
+              "van": "Skåpbil",
+              "bicycle": "Cykel",
+              "motion": "Rörelse"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "latest_event": {
+        "name": "Senaste händelse"
+      }
+    },
+    "image": {
+      "latest_event_image": {
+        "name": "Bild av senaste händelse"
+      }
+    }
+  },
+  "exceptions": {
+    "no_server": {
+      "message": "Ingen ArgusSen-server är konfigurerad"
+    }
+  },
+  "services": {
+    "protect_event": {
+      "name": "Skydda händelse",
+      "description": "Skydda en ArgusSen-händelse så att den aldrig raderas, eller ta bort skyddet.",
+      "fields": {
+        "event_id": {
+          "name": "Händelse",
+          "description": "Händelsens nummer (event_id i senaste händelse eller i en argussen_event)."
+        },
+        "protect": {
+          "name": "Skydda",
+          "description": "På = skydda, av = ta bort skyddet (endast administratörer)."
+        },
+        "config_entry_id": {
+          "name": "ArgusSen-server",
+          "description": "Behövs bara med mer än en ArgusSen-server."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Livevideo i Home Assistant",
+        "data": {
+          "stream_quality": "Kvalitet på livevideo i kamerakort"
+        },
+        "data_description": {
+          "stream_quality": "SD är lätt (telefoner, mobildata). HD är full upplösning. ArgusSen själv har alltid båda."
+        }
+      }
+    }
+  },
+  "selector": {
+    "stream_quality": {
+      "options": {
+        "sd": "SD – låg upplösning (lättare)",
+        "hd": "HD – full upplösning"
+      }
+    }
+  }
+}

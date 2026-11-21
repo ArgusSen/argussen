@@ -1,0 +1,16 @@
+configuration:
+  ai:
+    name: "AI-genkendelse"
+    description: "\"none\" = ingen AI (kun bevægelse, ingen hændelser). \"external\" = brug din egen AI-server (Blue Onyx eller CodeProject.AI) på adressen herunder. \"builtin\" = kør den indbyggede AI i appen (kræver en rimelig hurtig maskine – afprøvet på 64-bit pc'er, langsom på en Raspberry Pi; modellen hentes ved første start)."
+  ai_url:
+    name: "Ekstern AI-server"
+    description: "Kun ved \"external\", fx http://192.168.1.10:32168"
+  ai_model:
+    name: "Indbygget AI-model"
+    description: "Kun ved \"builtin\". rf-detr-n (114 MB, mest præcis) eller rt-detrv2-s (76 MB, lettere). Kun den valgte model hentes, og den kommer ikke med i backup."
+  mqtt:
+    name: "Home Assistant-entiteter via MQTT"
+    description: "Den ældre vej til Home Assistant (før ArgusSen-integrationen). Lad den være slået fra – integrationen giver kameraer med live-video, sensorer og hændelser. Kræver Mosquitto broker-appen."
+
+network:
+  8099/tcp: "Direkte adgang til ArgusSens API (ikke nødvendig for Home Assistant – lad den være tom)"

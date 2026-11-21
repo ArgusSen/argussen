@@ -1,0 +1,386 @@
+# English source texts = keys (tr("…") in app.js and the server's error messages). Line format: number|text
+0|Today
+1|Yesterday
+2|just now
+3|{n} min ago
+4|Motion
+5|No connection to the server
+6|login required
+7|Back
+8|MOTION
+9|No events while you are home
+10|HOME
+11|Switched off
+12|No signal
+13|Open {name}
+14|New
+15|Protected
+16|LOG IN
+17|Logging in …
+18|Login failed
+19|User
+20|Password
+21|Server
+22|You stay logged in on this phone
+23|CAMERA SYSTEM
+24|online
+25|Live
+26|Tap to open
+27|Latest events
+28|See all
+29|{n} of {m} online
+30|No cameras yet – add your first under Settings → Cameras.
+31|You do not have access to any cameras yet.
+32|No events yet
+33|Search camera
+34|Load older events
+35|Events
+36|No protected events
+37|No events match the filter
+38|Close full screen
+39|Loading video …
+40|This device cannot play the video
+41|No recording here
+42|The camera is switched off
+43|Waiting for the camera …
+44|Connection trouble – retrying …
+45|The video could not be played
+46|Full screen
+47|Playback speed
+48|Pick day
+49|Timeline – tap to seek
+50|Go to live
+51|Timeline
+52|Coloured = recorded · orange = event · tap the line to seek
+53|Events this day
+54|Full resolution is not stored here – showing SD
+55|Event
+56|No events
+57|The event no longer exists
+58|Pause
+59|Speed
+60|Back 10 seconds
+61|Newer event
+62|Older event
+63|Orange = the event · {f} s before and {e} s after are included · tap to seek
+64|Detected
+65|{p} % certain
+66|Watch live
+67|Open timeline
+68|Play
+69|The recording is no longer stored
+70|The event and the recording around it will not be deleted.
+71|Protection removed – deleted after 30 days as usual.
+72|Download video
+73|Downloading … the file goes to Downloads (see the notification).
+74|Could not start the download.
+75|Downloading …
+76|Downloaded.
+77|Delete
+78|Delete the event? This cannot be undone.
+79|Status
+80|up
+81|The storage (network drive) is not available – recording is paused.
+82|The NAS is not responding – recording to the local disk ({gb} GB free). Recordings are moved to the NAS when it is back.
+83|Storage
+84|Home
+85|Away
+86|no events: {names}
+87|all cameras active
+88|Cameras
+89|recording
+90|SD only – {f}
+91|HD missing
+92|no signal
+93|Show log
+94|Events today
+95|Free storage
+96|Free on NAS
+97|Filter (camera, text, error …)
+98|Filter
+99|Load older
+100|Log
+101|No lines
+102|{d} d {h} h
+103|{h} h {m} m
+104|{m} min
+105|Settings
+106|Users
+107|Create users, camera access, passwords
+108|Add and edit cameras, motion and AI
+109|Where recordings are stored
+110|General
+111|Display, my account, app version
+112|Everything ArgusSen has done
+113|Save and restart ArgusSen
+114|Network drive {n}
+115|in use
+116|Not available right now
+117|{free} free of {total}
+118|ArgusSen will restart (about 15 seconds). Recordings in the old location stay there but are no longer shown in ArgusSen. Continue?
+119|Saving …
+120|ArgusSen is restarting …
+121|ArgusSen is not responding yet – reload the page in a moment.
+122|Choose where new recordings are stored.
+123|The storage is not available – recording is paused until the network drive is back.
+124|Network drives (NAS) are added in Home Assistant: Settings → System → Storage → Add network storage, with usage "Media". Recordings are stored in the folder "argus" on the drive.
+125|Language
+126|Automatic
+127|Display (this device)
+128|Show yellow boxes on events
+129|Frame around person, car … in images
+130|Show boxes in live view
+131|Draws AI detections on top of the live video
+132|The two new passwords do not match
+133|Password changed. Other phones have been logged out.
+134|Current password
+135|New password (at least 8 characters)
+136|New password again
+137|Save new password
+138|My account
+139|You are logged in through Home Assistant.
+140|Change password
+141|Log out
+142|App
+143|Version
+144|Check for update
+145|Add user
+146|you
+147|All cameras
+148|No cameras
+149|Also cameras added later
+150|New user
+151|Unchanged
+152|Username
+153|Password (at least 8 characters)
+154|New password (empty = unchanged)
+155|The user's phones are logged out when the password changes
+156|This is you – your own admin rights cannot be removed.
+157|Admin
+158|Can edit cameras, users and settings
+159|May see
+160|Create user
+161|Save
+162|{name} has been logged out on all devices.
+163|Log out everywhere
+164|Delete the user {name}?
+165|Delete user
+166|Add camera
+167|disabled
+168|recording via {m}
+169|switched off
+170|no connection
+171|Saved.
+172|Camera
+173|The camera does not exist
+174|1 · Connection
+175|2 · Who may see it and operation
+176|Active
+177|may be switched off
+178|only those who see all
+179|3 · Home Assistant
+180|4 · Motion and AI
+181|Sensitivity {n}
+182|no events
+183|The camera is not running
+184|Delete the camera {name}?
+185|The recordings stay until they expire (14/30 days).
+186|Delete camera
+187|New camera
+188|Connection
+189|e.g. 192.168.1.20
+190|Trying bc, flv and rtsp … (up to 1 minute)
+191|Test image
+192|Methods set to: {m} – remember to save.
+193|Use the methods that work ({m})
+194|None of the methods worked – check address, username and password.
+195|Test connection
+196|Name
+197|Address (IP or name)
+198|RTSP port
+199|Reolink port (bc)
+200|Password
+201|Method
+202|bc = Reolink's own protocol, flv = HTTPS-FLV, rtsp = standard. ArgusSen switches to the next one by itself if a method fails.
+203|Create camera
+204|Once the camera is created, you can choose who may see it, the Home Assistant name and motion/AI.
+205|Who may see it and operation
+206|Who may see the camera
+207|Sees all cameras: {names}
+208|No other users
+209|Operation
+210|Records and creates events
+211|May be switched off
+212|Switched on and off as needed – no alert when it is gone
+213|Home Assistant
+214|e.g. Outside
+215|Name in Home Assistant
+216|The device is called "Camera <name>". Empty = the camera's name.
+217|Area
+218|Suggested area in Home Assistant.
+219|Motion and AI
+220|The camera is not running – motion and AI can be changed when it is active.
+221|Not saved yet.
+222|Motion sensitivity
+223|Only large movements
+224|Even small movements
+225|AI confidence
+226|More events
+227|Fewer false alarms
+228|Rotate the image 180°
+229|If the camera is mounted upside down
+230|No events when I am home
+231|Controlled by your phone via Home Assistant. Still records 24/7
+232|Time before the event
+233|Time after the event
+234|Creates an event
+235|New version {v} is ready
+236|You have the latest version
+237|Could not check: {f}
+238|Downloading update …
+239|Automatic (bc → rtsp → flv)
+240|bc, then flv, then rtsp
+241|flv, then bc, then rtsp
+242|rtsp, then bc, then flv
+243|rtsp, then bc
+244|bc only
+245|flv only
+246|rtsp only
+247|Person
+248|Car
+249|Van
+250|Bicycle
+251|All
+252|Overview
+253|Update
+254|Home Assistant's own disk
+255|Current storage
+256|Protect
+257|{n} hour ago
+258|{n} hours ago
+259|{n} device
+260|{n} devices
+261|Disabled
+262|Events in SD on mobile data
+263|Starts faster and uses less data – tap HD for full resolution
+264|switching method
+265|stopped
+266|the camera closed the connection
+267|the camera sent no image size
+268|the camera is not responding
+269|no video in the sub stream
+270|could not run for 5 min
+271|fails immediately
+272|works
+273|Automatic – the language of Home Assistant ({name})
+274|Used for the app, the log and the entity names in Home Assistant.
+275|Language on this device
+276|Same as ArgusSen ({name})
+277|Addresses found: {main} and {sub}
+278|Already added as {name}
+279|ArgusSen finds the addresses of the main stream (full resolution) and the sub stream (low resolution) itself – press Test connection.
+280|Brand
+281|Camera type
+282|Choose brand …
+283|Fills in the usual addresses for the brand – check them in the camera's manual if the test fails.
+284|Main stream
+285|Main stream (full resolution)
+286|No cameras found.
+287|ONVIF port
+288|Often 80, 8000 or 8080. ONVIF must be switched on in the camera – some cameras need a separate ONVIF user.
+289|Other brand
+290|Path such as /stream1 or a whole address rtsp://…
+291|Search
+292|Search the network for cameras
+293|Searched: {nets}. Cameras on another network can be found by giving it here:
+294|Searching the network … (about 10 seconds)
+295|Sub stream
+296|Sub stream (low resolution)
+297|Testing … (up to 1 minute)
+298|The camera does not send H.264. Recording works, but live view and playback need a browser that can show H.265 – choose H.264 in the camera if possible.
+299|Unknown camera
+300|Used for motion detection, the timeline and live view on phones – at most 1280 pixels wide.
+301|e.g. 192.168.1.0/24
+302|{name} chosen – fill in username and password and press Test connection.
+303|ONVIF (most other brands)
+304|RTSP address (manual)
+305|Main menu
+306|A Home Assistant user comes back the next time it opens ArgusSen (with the cameras new Home Assistant users get). Remove the user in Home Assistant instead.
+307|A still image of each camera and the latest event are sent via MQTT. Everybody with access to the MQTT broker can see them.
+308|ArgusSen will restart (about 15 seconds). Recordings in the old location are not moved: they can still be played back and are deleted when they expire. Continue?
+309|Camera images in Home Assistant
+310|Check the stream paths in the camera's manual – they differ between models.
+311|Days of 24/7 (SD)
+312|Days of events
+313|Events keep their HD video. Protected events are never deleted.
+314|Expected space: about {gb} for the 24/7 recordings (plus HD around events).
+315|Hours of full resolution (HD)
+316|If the camera's clock is very wrong, ONVIF login can fail – set the time in the camera.
+317|If the storage gets almost full, ArgusSen deletes the oldest recordings first – never those around protected events.
+318|In the camera (Reolink app → Settings → Network → Advanced → Server settings): switch on RTSP and HTTPS.
+319|Keep recordings
+320|New Home Assistant users see all cameras
+321|ONVIF must be switched on in the camera, often under Network or Integration.
+322|Only needed to log in from the ArgusSen phone app – in Home Assistant the user is already logged in.
+323|Only wired cameras can record 24/7 – battery cameras are not supported.
+324|Otherwise they see no cameras until you choose some here. Home Assistant administrators always see all.
+325|RTSP must be switched on in the camera (often port 554).
+326|Searched: {nets}. If your cameras are on another network (for example a separate camera network/VLAN), type it here – Home Assistant must be able to reach it:
+327|Some brands (e.g. Hikvision, TP-Link) need a separate ONVIF user, created in the camera.
+328|That is more than there is room for – the oldest recordings will be deleted before they expire.
+329|The built-in AI is experimental on this machine (ARM, e.g. Raspberry Pi) and may be slow.
+330|The storage is almost full and only recordings around protected events are left. Protect fewer events, keep recordings for a shorter time or free space.
+331|The sub stream must be at most 1280 pixels wide.
+332|Things to check:
+333|This browser cannot show this video (the camera probably sends H.265). Choose H.264 in the camera, or use a browser that supports H.265.
+334|Try the other usual ONVIF ports: 80, 8000, 8080, 2020.
+335|Use the username and password from the Reolink app.
+336|Administrator in Home Assistant – admin rights are set in Home Assistant.
+337|Not an administrator in Home Assistant – admin rights are set in Home Assistant.
+338|With Motion chosen, every motion becomes an event – the AI objects only add what was seen. Choose only the objects to let the AI filter out leaves, light and rain.
+339|Use the default
+340|Default for this storage
+341|The default for this storage would be
+342|SD {sub} days, HD {main} hours, events {ev} days
+s0|admin only
+s1|invalid request
+s2|name and address must be filled in
+s3|the camera's username and password must be filled in
+s4|the camera does not exist
+s5|no image
+s6|the username must not be empty or contain spaces
+s7|the password must be at least 8 characters
+s8|the username already exists
+s9|the user does not exist
+s10|you cannot remove your own admin rights
+s11|you cannot delete yourself
+s12|too many failed attempts – try again in 15 minutes
+s13|wrong username or password
+s14|the new password must be at least 8 characters
+s15|the current password is wrong
+s16|the camera closed the connection
+s17|the camera sent no image size
+s18|no recording in that period
+s19|no app version
+s20|wrong key
+s21|the event does not exist
+s22|only admins can delete events
+s23|the recording is no longer stored
+s24|the clip could not be made
+s28|that location does not exist or is not available
+s40|fill in both the main stream and the sub stream
+s41|give a network such as 192.168.1.0/24 (at most /22)
+s42|no local network found
+s43|ONVIF: the camera has no media service
+s44|ONVIF: the camera has no video profiles
+s45|the camera has only one stream – ArgusSen needs a sub stream (low resolution) as well
+s46|the stream address must be a path or an rtsp:// address, without spaces or a login – fill in username and password instead
+s47|unknown camera type
+s48|no picture – check the address, username and password
+s49|the address must be an IP address or a host name (without http:// or a port)
+s50|ONVIF: the camera reported an address that is not rtsp://
+s51|the admin rights of a Home Assistant user are set in Home Assistant
+s52|other clips are being made – try again in a moment
+s53|only administrators can remove the protection
+s54|the request must be JSON
+s55|days of SD must be 1–365, hours of HD 0–720 and days of events 1–365

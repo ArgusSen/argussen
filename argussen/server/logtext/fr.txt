@@ -1,0 +1,89 @@
+# Français
+1|Utilisateur
+2|redémarrage : le Supervisor a répondu %d
+3|redémarrage : %v
+4|%s a changé de mot de passe dans l'app (autres appareils déconnectés)
+5|Caméra %s (%s, %s) créée par %s
+6|Caméra %s modifiée par %s
+7|Caméra %s supprimée par %s (les enregistrements restent jusqu'au nettoyage)
+8|Utilisateur %s créé par %s
+9|Utilisateur %s modifié par %s
+10|Utilisateur %s supprimé par %s
+11|Utilisateur %s déconnecté de tous les appareils par %s
+12|Ouvert : %s depuis %s (%s)
+13|%s/%s : %d erreurs de décodage en 10 s – reconnexion
+14|%s/%s : %s – nouvel essai
+15|%s/main : aucune donnée depuis 90 s – redémarrage
+16|%s/sub : l'enregistrement est bloqué – redémarrage
+17|%s/sub : la caméra envoie le flux principal sur le flux secondaire (%d Mo/min) – reconnexion
+18|%s/sub : aucune image depuis 20 s – redémarrage
+19|%s : en marche (%dx%d)
+20|Caméras : %d déplacées de argus.json vers la base de données
+21|nettoyage : %d événements sans heure de fin clôturés
+22|%s : erreur IA : %v
+23|%s : événement %d confirmé par l'IA : %s
+24|%s/%s : passage de %s à %s (%s)
+25|%s/%s : %s fonctionne à nouveau – retour
+26|MQTT : Home Assistant a démarré – nouvel envoi de la découverte
+27|Connexion refusée pour %q depuis %s : %v
+28|Connexion : %s depuis %s (%s)
+29|Déconnexion : %s depuis %s
+30|paramètres de %s modifiés par %s : sensibilité %d, IA %d %%, objets %v, rotation %d, avant/après %d/%d s, désactivé à la maison %v
+31|changement de mot de passe refusé pour %s : %v
+32|Mode maison : %s (défini par %s)
+33|Événement %d (%s %s) %s par %s
+34|Événement %d (%s %s) supprimé par %s
+35|le clip de l'événement %d a échoué : %v %s
+36|HA : impossible de vérifier si %s est administrateur : %v
+37|HA : utilisateur %s : %v
+38|Nouvel utilisateur de Home Assistant : %s (admin : %v)
+39|Ouvert : %s via Home Assistant
+40|Stockage changé en %s (%s) par %s – ArgusSen redémarre
+41|ERREUR : le NAS (%s) ne répond pas – enregistrement local dans %s jusqu'à son retour
+42|Le NAS (%s) est de retour – enregistrement à nouveau sur le NAS et déplacement des enregistrements locaux
+43|ERREUR : le stockage %s n'est pas disponible (le lecteur réseau ne répond pas) – enregistrement en pause
+44|Le stockage %s est à nouveau disponible – enregistrement repris
+45|ERREUR : le stockage %s n'est pas disponible (lecteur réseau non monté) – enregistrement en attente
+46|ArgusSen %s démarré : %d caméras, stockage %s, web %s
+47|MQTT : connexion perdue : %v (nouvel essai)
+48|MQTT : connecté à %s
+49|nettoyage : %d anciens événements supprimés
+50|Nettoyage : %d anciens fichiers/dossiers supprimés%s
+51|Nettoyage : rien à faire%s
+52|Stockage local : %d fichiers (%.1f Go) déplacés vers le NAS%s
+53|Stockage local : peu d'espace (%.1f Go libres) – suppression des %d fichiers HD et %d fichiers SD les plus anciens (%.1f Go)
+54|HA : %s est maintenant administrateur
+55|HA : %s n'est plus administrateur
+56|, %.0f Go libres sur le stockage local
+57|, %.0f Go libres sur le NAS
+58|arrêt …
+59|MQTT : anciens appareils Home Assistant (argus) supprimés
+60|base de données passée aux noms anglais
+61|%s/%s : %s
+62|Langue changée en %s par %s
+63|Langue : %s
+64|Langue changée en automatique (%s) par %s
+65|Caméra %s : qui peut la voir n'a pas pu être enregistré : %v
+66|%s : événement %d déclenché par un mouvement
+67|Stockage %s : peu d'espace (%.1f Go libres) – suppression des %d fichiers HD et %d fichiers SD les plus anciens (%.1f Go)
+68|ERREUR : le stockage est presque plein et il ne reste que des enregistrements protégés – protégez moins d'événements ou libérez de la place
+69|Enregistrements conservés : SD %d jours, HD %d heures, événements %d jours (défini par %s)
+70|HA : %s n'est pas administrateur – voit les caméras choisies pour les nouveaux utilisateurs Home Assistant
+71|Home Assistant : impossible de recharger l'intégration Supervisor : %v
+72|Home Assistant : l'entité de mise à jour d'ArgusSen manquait – l'intégration Supervisor a été rechargée
+73|Intégration Home Assistant : %v
+74|Intégration Home Assistant : la découverte a répondu HTTP %d
+75|L'intégration ArgusSen %s a été installée dans Home Assistant
+v1|protégé
+v2|n'est plus protégé
+v3|à la maison
+v4|absent
+v5|arrêté
+v6|changement de méthode
+v7|n'a pas pu fonctionner pendant 5 min
+v8|échoue immédiatement
+v9|la caméra a fermé la connexion
+v10|la caméra n'a envoyé aucune taille d'image
+v11|la caméra ne répond pas
+v12|pas de vidéo dans le flux secondaire
+v13|les options de l'app
