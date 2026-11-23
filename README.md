@@ -15,10 +15,11 @@ hardware – no cloud and no subscription.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/phone-live.jpg" alt="Live view with the 24/7 timeline" width="180"><br><sub>Live and 24/7 timeline</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-events.jpg" alt="Events with filters" width="180"><br><sub>Events with AI</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-playback.jpg" alt="Playing an event" width="180"><br><sub>Playing an event</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-add-camera.jpg" alt="Finding cameras on the network" width="180"><br><sub>Find cameras on the network</sub></td>
+    <td align="center"><img src="docs/screenshots/phone-live.jpg" alt="Live view with the 24/7 timeline" width="160"><br><sub>Live and 24/7 timeline</sub></td>
+    <td align="center"><img src="docs/screenshots/phone-events.jpg" alt="Events with filters, zones and quick actions" width="160"><br><sub>Events with AI and zones</sub></td>
+    <td align="center"><img src="docs/screenshots/phone-playback.jpg" alt="Playing an event" width="160"><br><sub>Playing an event</sub></td>
+    <td align="center"><img src="docs/screenshots/phone-zones.jpg" alt="Drawing zones and an area to ignore on the camera picture" width="160"><br><sub>Zones (new in 1.1)</sub></td>
+    <td align="center"><img src="docs/screenshots/phone-add-camera.jpg" alt="Finding cameras on the network" width="160"><br><sub>Find cameras on the network</sub></td>
   </tr>
 </table>
 
