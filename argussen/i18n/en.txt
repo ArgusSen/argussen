@@ -299,7 +299,7 @@
 297|Testing … (up to 1 minute)
 298|The camera does not send H.264. Recording works, but live view and playback need a browser that can show H.265 – choose H.264 in the camera if possible.
 299|Unknown camera
-300|Used for motion detection, the timeline and live view on phones – at most 1280 pixels wide.
+300|Used for motion detection, the timeline and live view on phones – at most about 1.3 megapixels (e.g. 1280×960).
 301|e.g. 192.168.1.0/24
 302|{name} chosen – fill in username and password and press Test connection.
 303|ONVIF (most other brands)
@@ -330,7 +330,7 @@
 328|That is more than there is room for – the oldest recordings will be deleted before they expire.
 329|The built-in AI is experimental on this machine (ARM, e.g. Raspberry Pi) and may be slow.
 330|The storage is almost full and only recordings around protected events are left. Protect fewer events, keep recordings for a shorter time or free space.
-331|The sub stream must be at most 1280 pixels wide.
+331|The sub stream must be at most about 1.3 megapixels (e.g. 1280×960).
 332|Things to check:
 333|This browser cannot show this video (the camera probably sends H.265). Choose H.264 in the camera, or use a browser that supports H.265.
 334|Try the other usual ONVIF ports: 80, 8000, 8080, 2020.
@@ -342,6 +342,47 @@
 340|Default for this storage
 341|The default for this storage would be
 342|SD {sub} days, HD {main} hours, events {ev} days
+343|Create administrator
+344|The two passwords are not the same
+345|Welcome to ArgusSen. Create the first administrator – it can add cameras, users and change all settings.
+346|Repeat the password
+347|The recordings folder
+348|The recordings are stored in the folder that is mapped to /recordings (docker-compose.yml) – for example a NAS share mounted on the machine.
+349|No limit
+350|ArgusSen uses {used} of {max}.
+351|ArgusSen uses {used}.
+352|Most space for ArgusSen
+353|Limit in GB
+354|Empty = no limit. When the recordings take more, the oldest are deleted first – never those around protected events.
+355|ArgusSen uses
+356|Change order
+357|Move the cameras up or down, and press Save.
+358|Move up
+359|Move down
+360|Done
+361|Drag the cameras into place
+362|Edit
+363|Zone
+364|Zones
+365|5 · Zones
+366|No zones
+367|{z} zones, {i} areas to ignore
+368|Add a zone or an area to ignore below. Zones give events their name (e.g. "Person · Driveway"); areas to ignore are left out of motion and AI.
+369|Tap in the picture to set the corners ({n} of at least 3).
+370|Tap to add corners (at most 8), drag a corner to move it.
+371|Area to ignore
+372|New zone
+373|e.g. Driveway
+374|Counts in the zone
+375|None chosen = all objects.
+376|Undo last point
+377|Press Done on the zone first
+383|Search camera or zone
+384|Done and save
+385|Delete {name}?
+386|Slower
+387|Faster
+388|The app uses: CPU {cpu} % · RAM {mem} of {limit}
 s0|admin only
 s1|invalid request
 s2|name and address must be filled in
@@ -384,3 +425,13 @@ s52|other clips are being made – try again in a moment
 s53|only administrators can remove the protection
 s54|the request must be JSON
 s55|days of SD must be 1–365, hours of HD 0–720 and days of events 1–365
+s56|the first administrator can only be created from the local network
+s57|ArgusSen is already set up – log in
+s58|give a username
+s59|the limit must be at least 5 GB (or empty for no limit)
+s60|give every camera once
+s61|a zone needs 3–8 points
+s62|give every zone a name
+s63|at most 3 zones and 3 areas to ignore per camera
+s64|a zone must be inside the picture
+s65|a zone name can be at most 30 characters

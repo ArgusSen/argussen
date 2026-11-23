@@ -11,6 +11,8 @@ type MotionDetector struct {
 	bg       []float32
 	freq     []float32                           // how often the block has changed (moving average)
 	params   func() (threshold, minArea float64) // read for every frame so settings take effect immediately
+	ignore   func() []bool                       // blocks in areas to ignore (zones.go) – nil or a nil slice = none
+	moved    []bool                              // the blocks that changed in the latest frame (for the zones)
 	inited   int
 	hits     int
 	lastMove time.Time
@@ -21,8 +23,11 @@ const blk = 8
 func newMotionDetector(w, h int, cfg MotionConfig, params func() (float64, float64)) *MotionDetector {
 	bw, bh := w/blk, h/blk
 	return &MotionDetector{cfg: cfg, params: params, w: w, h: h, bw: bw, bh: bh,
-		bg: make([]float32, bw*bh), freq: make([]float32, bw*bh)}
+		bg: make([]float32, bw*bh), freq: make([]float32, bw*bh), moved: make([]bool, bw*bh)}
 }
+
+// Moved: the blocks that changed in the latest frame (valid until the next Feed).
+func (m *MotionDetector) Moved() []bool { return m.moved }
 
 // Feed takes the Y plane and answers whether there is motion (with a hold time of HoldSec).
 func (m *MotionDetector) Feed(y []byte) bool {
@@ -49,8 +54,17 @@ func (m *MotionDetector) Feed(y []byte) bool {
 		m.inited++
 		return false
 	}
+	var ign []bool
+	if m.ignore != nil {
+		ign = m.ignore()
+	}
 	changed, masked := 0, 0
 	for i, v := range cur {
+		m.moved[i] = false
+		if ign != nil && ign[i] { // an area to ignore: not part of the motion detection at all
+			masked++
+			continue
+		}
 		d := v - m.bg[i]
 		if d < 0 {
 			d = -d
@@ -65,6 +79,7 @@ func (m *MotionDetector) Feed(y []byte) bool {
 			masked++
 		} else if c {
 			changed++
+			m.moved[i] = true
 		}
 		// the background follows slowly (faster where there is no change)
 		a := float32(0.05)

@@ -74,6 +74,14 @@
 73|Home Assistant-integration: %v
 74|Home Assistant-integration: discovery svarede HTTP %d
 75|ArgusSen-integrationen %s blev installeret i Home Assistant
+76|Lager %s: ArgusSens grænse på %.0f GB er nået – slettede de ældste %d HD- og %d SD-filer (%.1f GB)
+77|Pladsgrænse for ArgusSen: %.0f GB (sat af %s)
+78|Pladsgrænse for ArgusSen: ingen (sat af %s)
+79|Kamera %s slået til af %s
+80|Kamera %s slået fra af %s
+81|Kameraernes rækkefølge ændret af %s
+82|Login afvist for %q fra %s (Google – en automatisk test af appen, ikke et indbrudsforsøg): %v
+83|Zoner for %s ændret af %s: %d zoner, %d områder der ignoreres
 v1|beskyttet
 v2|ikke længere beskyttet
 v3|hjemme
@@ -87,3 +95,7 @@ v10|kameraet sendte ingen billedstørrelse
 v11|kameraet svarer ikke
 v12|ingen video i substrømmen
 v13|appens indstillinger
+v14|første start
+v15|forkert brugernavn eller adgangskode
+v16|for mange forkerte forsøg – prøv igen om 15 minutter
+v17|den nuværende adgangskode er forkert

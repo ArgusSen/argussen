@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -18,6 +20,7 @@ type CamSettings struct {
 	PreSeconds    int      `json:"pre_seconds"`    // included in clips/kept in full resolution before the event (0–60)
 	PostSeconds   int      `json:"post_seconds"`   // … and after (0–120)
 	HomeOff       bool     `json:"home_off"`       // no events while home mode is on (indoor cameras)
+	Zones         []Zone   `json:"zones"`          // up to 3 zones and 3 areas to ignore (zones.go)
 }
 
 type Settings struct {
@@ -26,6 +29,30 @@ type Settings struct {
 	mu   sync.RWMutex
 	m    map[string]CamSettings
 	home bool
+	// the zones as block masks per camera and size – made once, dropped when the camera's settings change
+	maskCache map[string]*camMasks
+}
+
+// masks: the camera's zones as masks of bw × bh motion blocks (nil when the camera has no zones).
+func (s *Settings) masks(cam string, bw, bh int) *camMasks {
+	key := cam + "/" + strconv.Itoa(bw) + "x" + strconv.Itoa(bh)
+	s.mu.RLock()
+	m, ok := s.maskCache[key]
+	s.mu.RUnlock()
+	if ok {
+		return m
+	}
+	zones := s.Get(cam).Zones
+	if len(zones) > 0 {
+		m = buildMasks(zones, bw, bh)
+	}
+	s.mu.Lock()
+	if s.maskCache == nil {
+		s.maskCache = map[string]*camMasks{}
+	}
+	s.maskCache[key] = m
+	s.mu.Unlock()
+	return m
 }
 
 // aiObjects: the objects the AI can find (person, car, van, bicycle).
@@ -127,12 +154,22 @@ func (s *Settings) Set(cam string, cs CamSettings) error {
 		objs = append(objs, o)
 	}
 	cs.Objects = objs
+	zones, err := cleanZones(cs.Zones, valid)
+	if err != nil {
+		return err
+	}
+	cs.Zones = zones
 	b, _ := json.Marshal(cs)
 	if _, err := s.db.Exec(`INSERT INTO cam_settings(cam,json) VALUES(?,?) ON CONFLICT(cam) DO UPDATE SET json=excluded.json`, cam, string(b)); err != nil {
 		return err
 	}
 	s.mu.Lock()
 	s.m[cam] = cs
+	for k := range s.maskCache {
+		if strings.HasPrefix(k, cam+"/") {
+			delete(s.maskCache, k)
+		}
+	}
 	s.mu.Unlock()
 	return nil
 }
@@ -210,7 +247,7 @@ type Retention struct {
 
 func (s *Settings) Retention() Retention {
 	r := Retention{s.cfg.SubDays, s.cfg.MainHours, s.cfg.EventDays}
-	if !s.cfg.Ingress {
+	if !s.cfg.Ingress && !s.cfg.Standalone {
 		return r
 	}
 	var v string
@@ -232,6 +269,25 @@ func (s *Settings) DefaultRetention() Retention {
 		}
 	}
 	return Retention{SubDays: 14, MainHours: 24, EventDays: 30}
+}
+
+// MaxGB: the most space ArgusSen's recordings may take on the storage (GB, 0 = no limit – only the disk guard's free
+// space). Set in Settings → Storage; the disk guard deletes the oldest recordings when it is passed.
+func (s *Settings) MaxGB() float64 {
+	v, _ := strconv.ParseFloat(s.GetKV("max_gb"), 64)
+	return v
+}
+
+func (s *Settings) SetMaxGB(v float64) error {
+	if v < 0 || v > 1e6 || (v > 0 && v < 5) {
+		return fmt.Errorf("the limit must be at least 5 GB (or empty for no limit)")
+	}
+	if v == 0 {
+		_, err := s.db.Exec(`DELETE FROM kv WHERE k='max_gb'`)
+		return err
+	}
+	s.SetKV("max_gb", strconv.FormatFloat(v, 'f', -1, 64))
+	return nil
 }
 
 // RetentionIsDefault: the user has not chosen a retention (it follows the storage).

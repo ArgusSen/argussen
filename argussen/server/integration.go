@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -67,8 +68,12 @@ func (s *Server) announceIntegration() {
 	if v, err := os.ReadFile("/data/integration_installed"); err == nil {
 		os.Remove("/data/integration_installed")
 		log.Printf("The ArgusSen integration %s was installed in Home Assistant", strings.TrimSpace(string(v)))
-		haNotify(hn("ArgusSen: restart Home Assistant"),
-			hn("The ArgusSen integration has been installed or updated. Restart Home Assistant once to use it (Settings → ⋮ → Restart Home Assistant)."))
+		// an integration that already runs and shows "Restart required" under Repairs itself (1.1.0-beta.6 and later):
+		// no notification as well – only for the first installation or an older integration
+		if !integrationShowsRepair(haLoadedIntegrationVersion()) {
+			haNotify(hn("ArgusSen: restart Home Assistant"),
+				hn("The ArgusSen integration has been installed or updated. Restart Home Assistant once to use it (Settings → ⋮ → Restart Home Assistant)."))
+		}
 	}
 	tok, err := s.integrationToken()
 	if err != nil {
@@ -114,4 +119,45 @@ func supervisorSelfHostname() (string, error) {
 		return "", fmt.Errorf("no host name (HTTP %d)", resp.StatusCode)
 	}
 	return r.Data.Hostname, nil
+}
+
+// haLoadedIntegrationVersion: the version of the ArgusSen integration Home Assistant runs now ("" if none is loaded).
+func haLoadedIntegrationVersion() string {
+	var m struct {
+		Version string `json:"version"`
+	}
+	if haWSCmd(map[string]any{"type": "manifest/get", "integration": "argussen"}, &m) != nil {
+		return ""
+	}
+	return m.Version
+}
+
+// integrationShowsRepair: the integration version shows "Restart required" under Repairs itself (from 1.1.0-beta.6).
+func integrationShowsRepair(v string) bool {
+	base, beta, _ := strings.Cut(v, "-beta.")
+	p := strings.Split(base, ".")
+	if len(p) != 3 {
+		return false
+	}
+	n := [3]int{}
+	for i := range p {
+		x, err := strconv.Atoi(p[i])
+		if err != nil {
+			return false
+		}
+		n[i] = x
+	}
+	switch {
+	case n[0] != 1:
+		return n[0] > 1
+	case n[1] != 1:
+		return n[1] > 1
+	case n[2] > 0:
+		return true
+	}
+	if beta == "" {
+		return true // 1.1.0 itself
+	}
+	b, err := strconv.Atoi(beta)
+	return err == nil && b >= 6
 }

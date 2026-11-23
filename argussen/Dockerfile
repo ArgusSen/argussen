@@ -4,9 +4,10 @@
 # ---- the ArgusSen server (Go, static) ----
 FROM golang:1.27.4-trixie AS server
 ARG BUILD_VERSION=dev
+ARG GO_TAGS=
 WORKDIR /src
 COPY server/ ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${BUILD_VERSION}" -o /out/argus .
+RUN CGO_ENABLED=0 go build -tags "${GO_TAGS}" -trimpath -ldflags "-s -w -X main.version=${BUILD_VERSION}" -o /out/argus .
 
 # ---- built-in AI: Blue Onyx (MIT) on ONNX Runtime (MIT) ----
 FROM rust:1.100-trixie AS ai
@@ -44,7 +45,7 @@ RUN set -e; \
     } > /out/LICENSES-blue-onyx-crates.txt; \
     rm -rf /bo /usr/local/cargo/registry
 
-# ---- the app ----
+# ---- the Home Assistant app (the last stage = what Home Assistant builds) ----
 FROM ghcr.io/home-assistant/base-debian:trixie-2026.11.0
 ARG BUILD_ARCH
 ARG BUILD_VERSION=dev
@@ -55,6 +56,8 @@ COPY --from=server /out/argus /usr/bin/argus
 COPY --from=ai /out/ /opt/argus/ai/
 COPY web /opt/argus/web
 COPY integration /opt/argus/integration
+COPY blueprints /opt/argus/blueprints
+COPY models.sh /opt/argus/models.sh
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh /usr/bin/argus
 

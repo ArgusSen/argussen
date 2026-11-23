@@ -84,6 +84,14 @@ class ArgusSenClient:
         """The picture of an event (JPEG)."""
         return await self._request("GET", f"/api/events/{event_id}/thumb.jpg")
 
+    async def admin_cameras(self) -> list[dict[str, Any]]:
+        """All cameras, also those that are switched off (administrators)."""
+        return await self._request("GET", "/api/admin/cameras")
+
+    async def set_camera_enabled(self, cam: str, enabled: bool) -> None:
+        """Switch a camera on or off – "Active" in ArgusSen (administrators)."""
+        await self._request("PUT", f"/api/admin/cameras/{cam}/enabled", {"enabled": enabled})
+
     async def set_home(self, home: bool) -> None:
         """Switch the home mode on or off (administrators)."""
         await self._request("PUT", "/api/mode", {"home": home})

@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.1.0
+- Searching the network: a network bigger than /22 (e.g. a /16) is searched as the /22 around the machine, so cameras
+  in a neighbouring range are found without typing it.
+- **Most space for ArgusSen**: a limit in GB under *Settings → Storage* – the oldest recordings are deleted when it is
+  passed (never around protected events). The Status page shows how much ArgusSen uses (of the limit) and the free
+  space of the whole disk.
+- **Zones**: up to 3 zones and 3 areas to ignore per camera, drawn on a picture from the camera (*Settings → Cameras →
+  camera → 5 · Zones*). Events get the zones they were in ("Person · Driveway"); areas to ignore are left out of motion
+  and AI (fewer false events, less CPU). In Home Assistant every zone gets a binary sensor (on while something is in it)
+  and an event entity, and `argussen_event` has `zones`. The live view can show the zones (button *Zones*).
+- **Blueprint "ArgusSen – notify when something is detected"**: choose camera, objects, zone and phone – a message
+  with the camera picture. The app puts it into Home Assistant; `argussen_event` has `device_id`.
+- **Device triggers** for automations: choose a camera under *Trigger → Device* and pick "Person detected", "Car
+  detected" … or, with zones, "Person came into Driveway". `argussen_event` also has `zone_new`.
+- **The order of the cameras**: hold a camera in the overview for half a second and drag the cameras into place
+  (administrators), or use *Settings → Cameras → Change order*. The order is used in the overview, live view and
+  timeline for all users.
+- After an update of the app, **"Restart required"** is shown under *Settings → Repairs* with a button that restarts
+  Home Assistant – like other integrations (instead of a notification; the first installation still uses one).
+- **A switch per camera in Home Assistant, "Active"**: switch cameras on and off in automations (requested in issue #1).
+- Wide panorama cameras (e.g. Reolink Duo): the sub stream may now be up to about 1.3 megapixels (any shape, up to
+  2560 pixels wide) instead of at most 1280 pixels wide.
+- The events list remembers where you were when you go back from an event; *Show log* is only in *Settings*.
+- **Playback**: the controls stay fixed above the menu and the video fits the screen; one speed control
+  (− 1× +) from ½× to 64× everywhere. Protect, download and delete as icons in the events list.
+- **On a PC**: all pages use the full width, the live view fills the screen, the timeline shows the day's events to
+  the right of the video, and full screen has its own button bar (SD/HD, speed).
+- Clearer texts: important instructions in bold, help texts and headings easier to read.
+- The Status page in Home Assistant shows what the app itself uses (CPU and RAM), not the whole machine.
+- The integration has its own icon in Home Assistant.
+- Google's automatic test of the phone app is shown as such in the access log (not as a refused login).
+
 ## 1.0.0
 - First stable version.
 - The old app options `sub_days`, `main_hours` and `event_days` (replaced in 0.9.0 by Settings → Storage in

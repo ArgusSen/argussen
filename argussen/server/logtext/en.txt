@@ -75,6 +75,14 @@
 73|Home Assistant integration: %v
 74|Home Assistant integration: discovery answered HTTP %d
 75|The ArgusSen integration %s was installed in Home Assistant
+76|Storage %s: ArgusSen's limit of %.0f GB is reached – deleted the oldest %d HD and %d SD files (%.1f GB)
+77|Storage limit for ArgusSen: %.0f GB (set by %s)
+78|Storage limit for ArgusSen: none (set by %s)
+79|Camera %s switched on by %s
+80|Camera %s switched off by %s
+81|Camera order changed by %s
+82|Login refused for %q from %s (Google – an automatic test of the app, not an attempt to break in): %v
+83|Zones for %s changed by %s: %d zones, %d areas to ignore
 v1|protected
 v2|unprotected
 v3|home
@@ -88,3 +96,7 @@ v10|the camera sent no image size
 v11|the camera is not responding
 v12|no video in the sub stream
 v13|the app options
+v14|the first start
+v15|wrong username or password
+v16|too many failed attempts – try again in 15 minutes
+v17|the current password is wrong

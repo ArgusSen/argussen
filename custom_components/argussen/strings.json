@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Storage almost full"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Home mode"
+      },
+      "camera_active": {
+        "name": "Active"
       }
     },
     "event": {
       "detection": {
         "name": "Detection",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Person",
+              "car": "Car",
+              "van": "Van",
+              "bicycle": "Bicycle",
+              "motion": "Motion"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} detection",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – low resolution (lighter)",
         "hd": "HD – full resolution"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen: restart required",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Restart Home Assistant",
+            "description": "The ArgusSen app has installed a new version of the ArgusSen integration. Restart Home Assistant to use it. Home Assistant restarts now (it takes about a minute)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Person detected",
+      "car": "Car detected",
+      "van": "Van detected",
+      "bicycle": "Bicycle detected",
+      "motion": "Motion detected",
+      "zone_person": "Person came into {subtype}",
+      "zone_car": "Car came into {subtype}",
+      "zone_van": "Van came into {subtype}",
+      "zone_bicycle": "Bicycle came into {subtype}",
+      "zone_motion": "Motion in {subtype}"
     }
   }
 }

@@ -10,6 +10,9 @@ package main
 //
 // Recordings around protected events and the newest 10 minutes are never deleted. If there is still too little
 // space, the status page and Home Assistant show a warning.
+//
+// The same happens when ArgusSen's recordings pass the limit chosen in Settings → Storage ("max_gb"). How much they
+// take is measured in the background every 10 minutes (going through all files is slow on a network drive).
 
 import (
 	"context"
@@ -18,9 +21,29 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
+
+// usage: the space ArgusSen's recordings and thumbnails take on the main storage (bytes; -1 = not measured yet).
+var usage = func() *atomic.Int64 { v := &atomic.Int64{}; v.Store(-1); return v }()
+
+// measureUsage measures usage at the start and every 10 minutes (not while the network drive is away).
+func (s *Server) measureUsage(ctx context.Context) {
+	for {
+		if !store.useLocal.Load() && !s.storagePaused.Load() {
+			if b := usedBytes(store.main, 10*time.Minute); b >= 0 {
+				usage.Store(b)
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Minute):
+		}
+	}
+}
 
 // minFreeFor: the free space (GB) to keep on a storage place. Home Assistant's own disk: 10 % (at least 10 GB),
 // because Home Assistant needs room for its database, updates and backups. A network drive: 1 % (at least 5 GB).
@@ -95,7 +118,38 @@ func makeRoomIn(root string, minFree float64, ev *EventManager) (bool, int) {
 		return false, 0
 	}
 	need := int64(min(minFree+1-free, 1e6) * 1e9) // a little extra, so it does not happen every 30 seconds
-	events := ev.keepRanges(time.Time{})          // all events (incl. protected)
+	freed, hd, sd := deleteOldest(root, need, ev)
+	if hd+sd > 0 {
+		log.Printf("Storage %s: low on space (%.1f GB free) – deleted the oldest %d HD and %d SD files (%.1f GB)",
+			root, free, hd, sd, float64(freed)/1e9)
+	}
+	if root == store.main && freed > 0 && usage.Load() >= 0 {
+		usage.Add(-freed)
+	}
+	return freeGB(root) < minFree, hd + sd
+}
+
+// keepWithin deletes the oldest recordings on the main storage when ArgusSen's recordings take more than maxGB
+// (down to 98 % of it). It returns whether they still take too much, and how many files were deleted.
+func keepWithin(root string, maxGB float64, ev *EventManager) (bool, int) {
+	used := usage.Load()
+	limit := int64(maxGB * 1e9)
+	if maxGB <= 0 || used < 0 || used <= limit {
+		return false, 0
+	}
+	freed, hd, sd := deleteOldest(root, used-int64(maxGB*0.98*1e9), ev)
+	if hd+sd > 0 {
+		log.Printf("Storage %s: ArgusSen's limit of %.0f GB is reached – deleted the oldest %d HD and %d SD files (%.1f GB)",
+			root, maxGB, hd, sd, float64(freed)/1e9)
+	}
+	usage.Add(-freed)
+	return usage.Load() > limit, hd + sd
+}
+
+// deleteOldest deletes at least need bytes of the oldest recordings in root, in the order described at the top.
+// It returns the bytes freed and the number of HD and SD files deleted.
+func deleteOldest(root string, need int64, ev *EventManager) (int64, int, int) {
+	events := ev.keepRanges(time.Time{}) // all events (incl. protected)
 	prot := ev.protRanges()
 	cut := time.Now().UTC().Add(-10 * time.Minute)
 	main, sub := recordings(root, "main"), recordings(root, "sub")
@@ -120,11 +174,7 @@ func makeRoomIn(root string, minFree float64, ev *EventManager) (bool, int) {
 	pass(sub, events)  // 2. SD outside events
 	pass(main, nil)    // 3. HD around events that are not protected
 	pass(sub, nil)     //    … and SD
-	if n["main"]+n["sub"] > 0 {
-		log.Printf("Storage %s: low on space (%.1f GB free) – deleted the oldest %d HD and %d SD files (%.1f GB)",
-			root, free, n["main"], n["sub"], float64(freed)/1e9)
-	}
-	return freeGB(root) < minFree, n["main"] + n["sub"]
+	return freed, n["main"], n["sub"]
 }
 
 // guardDisks runs the disk guard every 30 seconds.
@@ -145,6 +195,9 @@ func (s *Server) guardDisks(ctx context.Context) {
 				continue
 			}
 			l, deleted := makeRoomIn(root, minFreeFor(s.cfg, root), s.ev)
+			if root == store.main && !l {
+				l, deleted = keepWithin(root, s.ev.settings.MaxGB(), s.ev)
+			}
 			if l {
 				low = true
 			}

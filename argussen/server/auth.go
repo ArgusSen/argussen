@@ -95,7 +95,7 @@ type Auth struct {
 }
 
 // Access is one line in the access log: "login" (with password), "opened" (the app used after at least 30 min pause)
-// or "refused" (wrong password/locked). Origin: "local" (directly on the local network), "ha" (through Home Assistant),
+// "refused" (wrong password/locked) or "google" (refused, but Google's automatic test of the app – google.go). Origin: "local" (directly on the local network), "ha" (through Home Assistant),
 // "home" or "remote" (through a tunnel – only in the private build).
 type Access struct {
 	At       int64  `json:"at"`
@@ -110,7 +110,7 @@ type Access struct {
 const openGap = 30 * 60 // seconds without use before the next use counts as "opened"
 
 func (a *Auth) Record(x Access) {
-	if x.Type != "refused" && testUser(x.UserName) {
+	if x.Type != "refused" && x.Type != "google" && testUser(x.UserName) {
 		return
 	}
 	x.At = time.Now().Unix()

@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Stockage presque plein"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Mode maison"
+      },
+      "camera_active": {
+        "name": "Actif"
       }
     },
     "event": {
       "detection": {
         "name": "Détection",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Personne",
+              "car": "Voiture",
+              "van": "Camionnette",
+              "bicycle": "Vélo",
+              "motion": "Mouvement"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} – détection",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – basse résolution (plus léger)",
         "hd": "HD – pleine résolution"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen : redémarrage requis",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Redémarrer Home Assistant",
+            "description": "L'app ArgusSen a installé une nouvelle version de l'intégration ArgusSen. Redémarrez Home Assistant pour l'utiliser. Home Assistant redémarre maintenant (environ une minute)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Personne détectée",
+      "car": "Voiture détectée",
+      "van": "Camionnette détectée",
+      "bicycle": "Vélo détecté",
+      "motion": "Mouvement détecté",
+      "zone_person": "Une personne est entrée dans {subtype}",
+      "zone_car": "Une voiture est entrée dans {subtype}",
+      "zone_van": "Une camionnette est entrée dans {subtype}",
+      "zone_bicycle": "Un vélo est entré dans {subtype}",
+      "zone_motion": "Mouvement dans {subtype}"
     }
   }
 }

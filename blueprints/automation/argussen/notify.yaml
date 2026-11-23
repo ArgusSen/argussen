@@ -1,0 +1,99 @@
+blueprint:
+  name: "ArgusSen – notify when something is detected"
+  description: >-
+    Sends a message with the camera picture to a phone when ArgusSen detects a person, car, van, bicycle or motion on a camera – optionally only in one zone.
+  domain: automation
+  author: ArgusSen
+  source_url: https://github.com/ArgusSen/argussen/blob/main/blueprints/automation/argussen/notify.yaml
+  input:
+    camera:
+      name: "Camera"
+      selector:
+        device:
+          filter:
+            - integration: argussen
+              model: Camera
+    objects:
+      name: "What"
+      default: [person]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: "Person"
+              value: person
+            - label: "Car"
+              value: car
+            - label: "Van"
+              value: van
+            - label: "Bicycle"
+              value: bicycle
+            - label: "Motion"
+              value: motion
+    zone:
+      name: "Zone (optional)"
+      description: "Only when it comes into this zone. The list shows the zones of all ArgusSen cameras (camera + zone) – choose one on the camera above. Empty = the whole picture."
+      default: ""
+      selector:
+        entity:
+          filter:
+            - integration: argussen
+              domain: binary_sensor
+              device_class: occupancy
+    phone:
+      name: "Phone"
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    pause:
+      name: "At most one message every"
+      description: "Minutes to wait before the next message (0 = no pause)."
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: min
+mode: single
+max_exceeded: silent
+variables:
+  camera_device: !input camera
+  objects: !input objects
+  zone_entity: !input zone
+  zone_id: "{{ state_attr(zone_entity, 'zone_id') if zone_entity else '' }}"
+  zone_name: "{{ state_attr(zone_entity, 'friendly_name') | default('', true) if zone_entity else '' }}"
+  pause_min: !input pause
+  names:
+    person: "Person"
+    car: "Car"
+    van: "Van"
+    bicycle: "Bicycle"
+    motion: "Motion"
+triggers:
+  - trigger: event
+    event_type: argussen_event
+conditions:
+  - condition: template
+    value_template: >-
+      {% set d = trigger.event.data %}
+      {% if d.device_id != camera_device %}false
+      {% elif not zone_id %}{{ d.new_labels | select('in', objects) | list | count > 0 }}
+      {% else %}{{ (d.zone_new or {}).get(zone_id, []) | select('in', objects) | list | count > 0 }}{% endif %}
+actions:
+  - variables:
+      found: >-
+        {% set d = trigger.event.data %}{% set l = d.new_labels if not zone_id else (d.zone_new or {}).get(zone_id, []) %}{% set ns = namespace(o=[]) %}{% for x in l if x in objects
+        and names[x] not in ns.o %}{% set ns.o = ns.o + [names[x]] %}{% endfor %}{{ ns.o | join(', ') }}
+      zone_label: "{{ (trigger.event.data.zone_names[trigger.event.data.zones.index(zone_id)]) if zone_id and zone_id in trigger.event.data.zones else '' }}"
+      camera_entity: "{{ device_entities(camera_device) | select('match', 'camera[.]') | first | default('') }}"
+  - device_id: !input phone
+    domain: mobile_app
+    type: notify
+    title: "{{ trigger.event.data.camera_name }}"
+    message: "{{ found }}{{ (' · ' ~ zone_label) if zone_label else '' }}"
+    data:
+      image: "{{ '/api/camera_proxy/' ~ camera_entity if camera_entity else '' }}"
+      group: argussen
+  - delay:
+      minutes: "{{ pause_min }}"

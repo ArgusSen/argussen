@@ -108,9 +108,11 @@ function duration(ms) {
 }
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 function eventLabel(e) {
-  if (!e.labels || !e.labels.length) return tr('Motion');
   // motion alone has no AI certainty: no percentage
-  return e.labels.map(labelName).join(', ') + (e.score ? ' ' + Math.round(e.score * 100) + ' %' : '');
+  const what = (!e.labels || !e.labels.length) ? tr('Motion')
+    : e.labels.map(labelName).join(', ') + (e.score ? ' ' + Math.round(e.score * 100) + ' %' : '');
+  const zones = (e.zones || []).map((z) => zoneName(e.cam, z)).filter(Boolean);
+  return zones.length ? what + ' · ' + zones.join(', ') : what;
 }
 const eventStart = (e) => new Date(e.start).getTime();
 const eventEnd = (e) => (e.end && !e.end.startsWith('0001') ? new Date(e.end).getTime() : Date.now());
@@ -259,12 +261,12 @@ function markSeen() {
 
 // ---------- camera tile with a refreshing still image ----------
 function tile(c, ctx, large) {
-  const img = el('img', { alt: '', style: rot(c) });
+  const img = el('img', { alt: '', style: rot(c), draggable: 'false' });
   const name = el('span', { class: 'name' }, c.name);
   const motionTag = el('span', { class: 'motionTag' }, tr('MOTION'));
   const homeTag = el('span', { class: 'motionTag homeTag', title: tr('No events while you are home') }, tr('HOME'));
   const noSignal = el('span', { class: 'noSignal' }, c.optional ? tr('Switched off') : tr('No signal'));
-  const f = el('button', { type: 'button', class: 'tile' + (c.height > c.width ? ' tall' : ''), 'aria-label': tr('Open {name}', { name: c.name }),
+  const f = el('button', { type: 'button', class: 'tile' + (c.height > c.width ? ' tall' : ''), 'data-cam': c.id, 'aria-label': tr('Open {name}', { name: c.name }),
     onclick: () => go('camera', { cam: c.id }) }, img, name, noSignal);
   let i = 0;
   const refresh = async () => {
@@ -331,6 +333,40 @@ SCREENS.login = (root) => {
     el('div', { class: 'head', html: ICON.eyeColour + '<h1>ARGUSSEN</h1><small>' + tr('CAMERA SYSTEM') + '</small>' }), form));
 };
 
+// The first start of a standalone ArgusSen: no users yet – create the first administrator (only from the local network).
+SCREENS.setup = (root) => {
+  const errorText = el('p', { class: 'errorText', role: 'alert' });
+  const userField = el('input', { type: 'text', autocomplete: 'username', autocapitalize: 'none', value: 'admin' });
+  const pw = el('input', { type: 'password', autocomplete: 'new-password' });
+  const pw2 = el('input', { type: 'password', autocomplete: 'new-password' });
+  const btn = el('button', { type: 'submit', class: 'btn green', style: 'min-height:52px;font-size:18px;margin-top:10px' }, tr('Create administrator'));
+  const form = el('form', { onsubmit: async (ev) => {
+    ev.preventDefault();
+    errorText.textContent = '';
+    if (pw.value !== pw2.value) { errorText.textContent = tr('The two passwords are not the same'); return; }
+    btn.disabled = true;
+    try {
+      const r = await fetch(S.server + '/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: userField.value.trim(), password: pw.value, device: 'browser' }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error ? tr(d.error) : tr('Login failed'));
+      S.token = d.token; S.user = d.user;
+      save('token', S.token); save('user', S.user);
+      start();
+    } catch (e) {
+      errorText.textContent = e.message === 'Failed to fetch' ? tr('No connection to the server') : e.message;
+      btn.disabled = false;
+    }
+  } },
+  el('p', { class: 'hint do' }, tr('Welcome to ArgusSen. Create the first administrator – it can add cameras, users and change all settings.')),
+  el('label', { class: 'field' }, tr('User'), userField),
+  el('label', { class: 'field' }, tr('Password (at least 8 characters)'), pw),
+  el('label', { class: 'field' }, tr('Repeat the password'), pw2),
+  errorText, btn);
+  root.append(el('div', { class: 'login' },
+    el('div', { class: 'head', html: ICON.eyeColour + '<h1>ARGUSSEN</h1><small>' + tr('CAMERA SYSTEM') + '</small>' }), form));
+};
+
 SCREENS.overview = (root, p, ctx) => {
   const online = el('span', { class: tr('online') });
   const grid = el('div', { class: 'grid' });
@@ -343,7 +379,9 @@ SCREENS.overview = (root, p, ctx) => {
         el('button', { type: 'button', class: 'link', onclick: () => navGo('events') }, tr('See all'))),
       list)));
   let drawn = null; // null = not drawn yet (an empty list must also be drawn)
+  const arrange = S.user && S.user.admin ? arrangeGrid(grid, root.querySelector('.heading'), (key) => { drawn = key; }) : null;
   interval(ctx, async () => {
+    if (arrange && arrange.active()) return; // do not redraw while the cameras are being moved
     const cams = await fetchCameras();
     const counted = cams.filter((c) => c.online || !c.optional);   // cameras that are off and allowed to be off do not count
     const n = counted.filter((c) => c.online).length;
@@ -368,29 +406,116 @@ SCREENS.overview = (root, p, ctx) => {
   }, 15000);
 };
 
+// arrangeGrid: administrators hold a camera in the overview for half a second, then drag the cameras into a new
+// order (saved when one is dropped – it is the order for everybody). "Done" ends it.
+function arrangeGrid(grid, heading, onSaved) {
+  let on = false, drag = null, timer = null, start = null, moved = false;
+  const hint = heading.querySelector('.hint');
+  const done = el('button', { type: 'button', class: 'link', hidden: true, onclick: () => setOn(false) }, tr('Done'));
+  heading.append(done);
+  const setOn = (v) => {
+    on = v; grid.classList.toggle('arrange', v); done.hidden = !v;
+    hint.textContent = v ? tr('Drag the cameras into place') : tr('Tap to open');
+  };
+  const tileOf = (t) => t && t.closest && t.closest('.tile');
+  const save = async () => {
+    const order = [...grid.querySelectorAll('.tile')].map((t) => t.dataset.cam);
+    try {
+      // switched-off cameras are not in the overview: they keep their places, the others fill the rest
+      const all = (await api('/api/admin/cameras')).map((c) => c.id);
+      const shown = new Set(order);
+      let k = 0;
+      const ids = all.map((id) => (shown.has(id) ? order[k++] : id));
+      await api('/api/admin/cameras/order', { method: 'PUT', body: { ids } });
+      onSaved((await fetchCameras()).map((c) => c.id).join());
+    } catch (e) { alert(e.message); }
+  };
+  grid.addEventListener('contextmenu', (ev) => { if (tileOf(ev.target)) ev.preventDefault(); });
+  grid.addEventListener('pointerdown', (ev) => {
+    const t = tileOf(ev.target);
+    if (!t || !t.dataset.cam) return;
+    start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId }; moved = false;
+    const begin = () => { drag = t; t.classList.add('dragging'); try { t.setPointerCapture(ev.pointerId); } catch (e) { /* */ } };
+    if (on) { begin(); return; }
+    timer = setTimeout(() => { timer = null; setOn(true); if (navigator.vibrate) navigator.vibrate(20); begin(); }, 500);
+  });
+  grid.addEventListener('pointermove', (ev) => {
+    if (timer && start && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 8) { clearTimeout(timer); timer = null; }
+    if (!drag) return;
+    moved = moved || Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 8;
+    drag.style.pointerEvents = 'none';
+    const over = tileOf(document.elementFromPoint(ev.clientX, ev.clientY));
+    drag.style.pointerEvents = '';
+    if (over && over !== drag && over.parentNode === grid) {
+      const tiles = [...grid.children];
+      grid.insertBefore(drag, tiles.indexOf(over) > tiles.indexOf(drag) ? over.nextSibling : over);
+    }
+  });
+  // no scrolling while a camera is dragged (Android WebView/Chrome)
+  grid.addEventListener('touchmove', (ev) => { if (drag) ev.preventDefault(); }, { passive: false });
+  const end = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!drag) return;
+    drag.classList.remove('dragging');
+    drag = null;
+    if (moved) save();
+  };
+  grid.addEventListener('pointerup', end);
+  grid.addEventListener('pointercancel', end);
+  // while arranging, a tap does not open the camera
+  grid.addEventListener('click', (ev) => { if (on) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+  return { active: () => on || !!drag };
+}
+
 SCREENS.live = (root, p, ctx) => {
   const grid = el('div', { class: 'grid large' });
-  root.append(topBar(tr('Live')), el('div', { class: 'page' }, el('div', { class: 'content' }, grid)));
+  const page = el('div', { class: 'page' }, el('div', { class: 'content' }, grid));
+  root.append(topBar(tr('Live')), page);
+  root.style.maxWidth = 'none'; // the live view may use the whole width of a big screen
+  ctx.cleanup.push(() => { root.style.maxWidth = ''; });
+  // a big screen (PC): all cameras fit the screen without scrolling – the number of columns that gives the biggest
+  // pictures is chosen. A phone keeps one camera per row (scroll), where each picture is as big as possible.
+  const wide = window.matchMedia('(min-width: 800px)');
+  const fit = () => {
+    const n = grid.children.length;
+    if (!wide.matches || !n) { grid.style.gridTemplateColumns = ''; grid.style.justifyContent = ''; return; }
+    const gap = 10, pad = 24;
+    const W = page.clientWidth - pad, H = page.clientHeight - pad;
+    let best = { w: 0, cols: 1 };
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const w = Math.min((W - gap * (cols - 1)) / cols, ((H - gap * (rows - 1)) / rows) * 4 / 3);
+      if (w > best.w) best = { w, cols };
+    }
+    grid.style.gridTemplateColumns = 'repeat(' + best.cols + ', ' + Math.floor(best.w) + 'px)';
+    grid.style.justifyContent = 'center';
+  };
+  const ro = new ResizeObserver(fit);
+  ro.observe(page);
+  wide.addEventListener('change', fit);
+  ctx.cleanup.push(() => { ro.disconnect(); wide.removeEventListener('change', fit); });
   let drawn = null;
   interval(ctx, async () => {
     const cams = await fetchCameras();
     const k = cams.map((c) => c.id).join();
-    if (k !== drawn) { drawn = k; grid.replaceChildren(...cams.map((c) => tile(c, ctx, true))); }
+    if (k !== drawn) { drawn = k; grid.replaceChildren(...cams.map((c) => tile(c, ctx, true))); fit(); }
   }, 2000);
 };
 
 SCREENS.events = (root, p, ctx) => {
   const st = Object.assign({ filter: 'All', search: '' }, p.filter ? p : {});
   const chips = el('div', { class: 'chips' });
-  const search = el('input', { type: 'search', placeholder: tr('Search camera'), 'aria-label': tr('Search camera'), value: st.search,
+  const search = el('input', { type: 'search', placeholder: tr('Search camera or zone'), 'aria-label': tr('Search camera or zone'), value: st.search,
     oninput: () => { st.search = search.value; p.search = st.search; draw(); } });
   const list = el('div');
   const moreBtn = el('button', { type: 'button', class: 'moreBtn', hidden: true, onclick: () => loadMore() }, tr('Load older events'));
+  const page = el('div', { class: 'page' }, list, moreBtn);
   root.append(topBar(tr('Events')),
-    el('div', { class: 'filters' }, el('label', { class: 'search', html: ICON.search }, search), chips),
-    el('div', { class: 'page' }, list, moreBtn));
-  let allItems = [];
-  let protectedEvents = [];
+    el('div', { class: 'filters' }, el('label', { class: 'search', html: ICON.search }, search), chips), page);
+  // back from an event: the list is shown as it was (the loaded events and how far down it was scrolled)
+  let allItems = p._items || [];
+  let protectedEvents = p._protected || [];
+  ctx.cleanup.push(() => { p._items = allItems; p._protected = protectedEvents; p._scroll = page.scrollTop; });
   const drawChips = () => chips.replaceChildren(...['All', ...LABELS, 'Protected'].map((n) =>
     el('button', { type: 'button', class: 'chip' + (st.filter === n ? ' selected' : ''), 'aria-pressed': st.filter === n ? 'true' : 'false',
       onclick: async () => {
@@ -402,13 +527,14 @@ SCREENS.events = (root, p, ctx) => {
     const q = st.search.trim().toLowerCase();
     const source = st.filter === 'Protected' ? protectedEvents : allItems;
     const shown = source.filter((e) => (st.filter === 'All' || st.filter === 'Protected' || (e.labels || []).includes(st.filter.toLowerCase()))
-      && (!q || camName(e.cam).toLowerCase().includes(q)));
+      && (!q || camName(e.cam).toLowerCase().includes(q) || (e.zones || []).some((z) => zoneName(e.cam, z).toLowerCase().includes(q))));
     const items = [];
     let day = '';
     for (const e of shown) {
       const d = dayName(eventStart(e));
       if (d !== day) { day = d; items.push(el('h2', { class: 'small day' }, d)); }
-      items.push(eventRowEl(e, false, () => go('playback', { id: e.id, list: shown.map((x) => x.id) })));
+      items.push(el('div', { class: 'eventItem' }, eventRowEl(e, false, () => go('playback', { id: e.id, list: shown.map((x) => x.id) })),
+        eventIcons(e, () => { allItems = allItems.filter((x) => x.id !== e.id); protectedEvents = protectedEvents.filter((x) => x.id !== e.id); draw(); })));
     }
     list.replaceChildren(...(items.length ? items : [el('p', { class: 'empty' }, st.filter === 'Protected' ? tr('No protected events') : allItems.length ? tr('No events match the filter') : tr('No events yet'))]));
     moreBtn.hidden = allItems.length < 100 || st.filter === 'Protected';
@@ -426,10 +552,18 @@ SCREENS.events = (root, p, ctx) => {
     moreBtn.disabled = false;
   }
   drawChips();
+  if (p._items) { draw(); page.scrollTop = p._scroll || 0; }
   interval(ctx, async () => {
     await fetchCameras();
     const newItems = await fetchEvents();
-    if (allItems.length <= 100) allItems = newItems.slice();
+    if (allItems.length <= 100) {
+      // new events at the top must not push the list down under the finger
+      const before = page.scrollHeight;
+      allItems = newItems.slice();
+      draw();
+      if (page.scrollTop > 0) page.scrollTop += page.scrollHeight - before;
+      return;
+    }
     draw();
   }, 15000);
   ctx.cleanup.push(markSeen);
@@ -579,6 +713,43 @@ function zoomable(box, inner) {
 }
 
 // Live + timeline for one camera
+// speedControl: "− 1× +" over the video, the same on the timeline and when playing an event. ½× … 16× is the video's
+// own speed; 64× plays at 16× and jumps ahead once a second (browsers play at most 16×) – best in SD.
+const SPEED_STEPS = [0.5, 1, 2, 4, 8, 16, 64];
+function speedControl(A, st, ctx) {
+  const label = el('span', { class: 'speedVal', 'aria-live': 'polite' });
+  let jump = null, live = false;
+  const minus = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Slower') }, '−');
+  const plus = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Faster') }, '+');
+  let jumpFor = 0; // the speed the jump timer runs for (it is only restarted when the speed changes)
+  const apply = () => {
+    const v = live ? 1 : st.speed;
+    label.textContent = (v === 0.5 ? '½' : v) + '×';
+    const rate = Math.min(v, 16);
+    if (A.video.playbackRate !== rate) { A.video.defaultPlaybackRate = rate; A.video.playbackRate = rate; }
+    const want = v > 16 ? v : 0;
+    if (want !== jumpFor) {
+      clearInterval(jump); jump = null; jumpFor = want;
+      if (want) jump = setInterval(() => { if (!A.video.paused) A.video.currentTime += want - 16; }, 1000);
+    }
+    minus.disabled = v === SPEED_STEPS[0]; plus.disabled = v === SPEED_STEPS[SPEED_STEPS.length - 1];
+  };
+  const step = (d) => {
+    const i = SPEED_STEPS.indexOf(st.speed);
+    st.speed = SPEED_STEPS[Math.max(0, Math.min(SPEED_STEPS.length - 1, (i < 0 ? 1 : i) + d))];
+    apply();
+  };
+  minus.onclick = () => step(-1);
+  plus.onclick = () => step(1);
+  A.video.addEventListener('loadedmetadata', apply);
+  ctx.cleanup.push(() => clearInterval(jump));
+  const box = el('div', { class: 'speedCtl' }, minus, label, plus);
+  if (!SPEED_STEPS.includes(st.speed)) st.speed = 1;
+  apply();
+  // live video always plays at 1× (the control is hidden then)
+  return { el: box, apply, setLive: (v) => { if (v === live && box.hidden === v) return; live = v; box.hidden = v; apply(); } };
+}
+
 SCREENS.camera = (root, p, ctx) => {
   const c = camById(p.cam);
   S.lastCam = c.id; save('lastCam', c.id);
@@ -590,16 +761,19 @@ SCREENS.camera = (root, p, ctx) => {
   const A = newPlayer(c, ctx);
   const sd = el('button', { type: 'button', class: 'small-btn' }, 'SD');
   const hd = el('button', { type: 'button', class: 'small-btn' }, 'HD');
-  const SPEEDS = [1, 2, 4, 0.5];
   st.speed = p.speed || 1;
-  const speedBtn = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Playback speed') });
-  const setSpeed = () => {
-    speedBtn.textContent = (st.speed === 0.5 ? '½' : st.speed) + '×';
-    A.video.defaultPlaybackRate = st.speed; A.video.playbackRate = st.speed;
-  };
-  speedBtn.onclick = () => { st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length]; setSpeed(); };
-  A.video.addEventListener('loadedmetadata', () => { A.video.playbackRate = st.at === null ? 1 : st.speed; });
-  A.buttons.append(sd, hd, speedBtn);
+  const speedCtl = speedControl(A, st, ctx);
+  A.buttons.append(sd, hd, speedCtl.el);
+  // the camera's zones as outlines over the video (remembered per device)
+  if ((c.zones || []).length) {
+    const zoneLayer = el('div', { class: 'overlay', style: rot(c) + 'pointer-events:none' }, zoneSVG(c.zones, null));
+    const zonesBtn = el('button', { type: 'button', class: 'small-btn', 'aria-pressed': 'false' }, tr('Zones'));
+    const show = (on) => { zoneLayer.hidden = !on; zonesBtn.classList.toggle('selected', on); zonesBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); save('showZones', on); };
+    zonesBtn.onclick = () => show(zoneLayer.hidden);
+    A.overlay.after(zoneLayer);
+    show(!!load('showZones', false));
+    A.buttons.append(zonesBtn);
+  }
   const days = el('div', { class: 'chips' });
   const dateInput = el('input', { type: 'date', class: 'datePicker', 'aria-label': tr('Pick day') });
   const bar = el('div', { class: 'tl-bar', role: 'slider', 'aria-label': tr('Timeline – tap to seek'), tabindex: '0' });
@@ -607,7 +781,24 @@ SCREENS.camera = (root, p, ctx) => {
   const axisEl = el('div', { class: 'tl-axis' }, ...['00', '06', '12', '18', '24'].map((x) => el('span', {}, x)));
   const eventList = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
   const toLive = el('button', { type: 'button', class: 'btn red', onclick: () => { st.at = null; play(); } }, tr('Go to live'));
-  root.append(topBar(c.name, { back: true, right: [badge] }), A.box,
+  // a PC: the video fits its area, the timeline stays above the menu and the day's events are a column on the right
+  // (CSS #screen.camScreen); a phone keeps the video at the top and scrolls the rest
+  const camFit = el('div', { class: 'camFit' }, A.box);
+  const wide = window.matchMedia('(min-width: 800px)');
+  const ratio = (c.width || 4) / (c.height || 3);
+  const fitVideo = () => {
+    if (!wide.matches || document.body.classList.contains('full')) { A.box.style.width = ''; A.box.style.height = ''; return; }
+    const W = camFit.clientWidth, H = camFit.clientHeight;
+    if (!W || !H) return;
+    const w = Math.min(W, H * ratio);
+    A.box.style.width = Math.floor(w) + 'px'; A.box.style.height = Math.floor(w / ratio) + 'px';
+  };
+  const ro = new ResizeObserver(fitVideo);
+  ro.observe(camFit);
+  wide.addEventListener('change', fitVideo);
+  root.classList.add('camScreen');
+  ctx.cleanup.push(() => { ro.disconnect(); wide.removeEventListener('change', fitVideo); root.classList.remove('camScreen'); });
+  root.append(topBar(c.name, { back: true, right: [badge] }), camFit,
     el('div', { class: 'page under-player' },
       el('section', { class: 'tl' }, camChips,
         el('div', { class: 'heading' }, el('h2', {}, tr('Timeline')), days), axisEl, bar,
@@ -619,7 +810,7 @@ SCREENS.camera = (root, p, ctx) => {
       : el('span', { class: 'timeBadge' }, (dayStart(st.at) === dayStart(Date.now()) ? '' : new Date(st.at).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) + ' ') + fmtTime(A.at() || st.at, true)));
     sd.classList.toggle('selected', !st.hd); hd.classList.toggle('selected', st.hd);
     toLive.hidden = st.at === null;
-    speedBtn.hidden = st.at === null;
+    speedCtl.setLive(st.at === null);
   }
   async function play() {
     A.overlay.replaceChildren();
@@ -629,7 +820,7 @@ SCREENS.camera = (root, p, ctx) => {
       const from = Math.round(st.at - 60000), until = Math.round(st.at + 3 * 3600000);
       let ok = await A.play('/api/play/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '?from=' + from + '&to=' + until, false, st.at);
       if (!ok && st.hd) { st.hd = false; A.notice(tr('Full resolution is not stored here – showing SD')); ok = await A.play('/api/play/' + c.id + '/sub?from=' + from + '&to=' + until, false, st.at); }
-      setSpeed();
+      speedCtl.apply();
     }
     drawBadge();
   }
@@ -721,21 +912,32 @@ SCREENS.playback = async (root, p, ctx) => {
   const idx = list.indexOf(e.id);
   const neighbours = (d) => { const n = list[idx + d]; if (n !== undefined) go('playback', { id: n, list }, true); };
   const playBtn = el('button', { type: 'button', class: 'play filled', 'aria-label': tr('Pause'), html: ICON.pause });
-  const speed = el('button', { type: 'button', class: 'speed', 'aria-label': tr('Speed') }, '1×');
   const head = el('div', { class: 'head' });
   const bar = el('div', { class: 'tl-bar', style: 'height:34px' },
     el('div', { class: 'hm shown', style: `left:${(start - from) / (until - from) * 100}%;width:${(endT - start) / (until - from) * 100}%` }), head);
-  root.append(topBar(c.name, { back: true, under: dayName(start) + ' ' + fmtTime(start, true) + ' · ' + duration(endT - start) }), A.box,
+  // the video fills what is left of the screen (in its own shape); the controls and the timeline stay fixed above the menu
+  const fit = el('div', { class: 'fitPlayer' }, A.box);
+  const ratio = (c.width || 4) / (c.height || 3);
+  const resize = () => {
+    if (document.body.classList.contains('full')) return;
+    const W = fit.clientWidth, H = fit.clientHeight;
+    if (!W || !H) return;
+    const w = Math.min(W, H * ratio);
+    A.box.style.width = Math.floor(w) + 'px'; A.box.style.height = Math.floor(w / ratio) + 'px';
+  };
+  const ro = new ResizeObserver(resize);
+  ro.observe(fit);
+  ctx.cleanup.push(() => ro.disconnect());
+  root.append(topBar(c.name, { back: true, under: dayName(start) + ' ' + fmtTime(start, true) + ' · ' + duration(endT - start) }), fit,
     el('div', { class: 'controls under-player' },
       el('button', { type: 'button', 'aria-label': tr('Back 10 seconds'), html: ICON.back10, onclick: () => { A.video.currentTime = Math.max(0, A.video.currentTime - 10); } }),
       el('button', { type: 'button', class: 'filled', 'aria-label': tr('Newer event'), html: ICON.previous, disabled: idx <= 0, style: idx <= 0 ? 'opacity:.35' : '', onclick: () => neighbours(-1) }),
       playBtn,
-      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Older event'), html: ICON.next, disabled: idx < 0 || idx >= list.length - 1, style: idx < 0 || idx >= list.length - 1 ? 'opacity:.35' : '', onclick: () => neighbours(1) }),
-      speed),
-    el('div', { class: 'page under-player' },
-      el('div', { class: 'tl', style: 'background:none' },
-        el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
-        el('p', { class: 'hint' }, tr('Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }))),
+      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Older event'), html: ICON.next, disabled: idx < 0 || idx >= list.length - 1, style: idx < 0 || idx >= list.length - 1 ? 'opacity:.35' : '', onclick: () => neighbours(1) })),
+    el('div', { class: 'tl under-player fixed', style: 'background:none' },
+      el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
+      el('p', { class: 'hint' }, tr('Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }))),
+    el('div', { class: 'under-player details' },
       el('div', { class: 'content' },
         el('h2', { class: 'small' }, tr('Detected')),
         el('div', { class: 'eventLabels' }, ...(e.labels && e.labels.length ? e.labels.map((l) => el('span', { class: 'eventLabel' }, labelName(l))) : [el('span', { class: 'eventLabel' }, tr('Motion'))]),
@@ -748,8 +950,8 @@ SCREENS.playback = async (root, p, ctx) => {
   playBtn.onclick = () => { if (A.video.paused) A.video.play(); else A.video.pause(); };
   A.video.addEventListener('play', () => { playBtn.innerHTML = ICON.pause; playBtn.setAttribute('aria-label', tr('Pause')); });
   A.video.addEventListener('pause', () => { playBtn.innerHTML = ICON.play; playBtn.setAttribute('aria-label', tr('Play')); });
-  const SPEEDS = [1, 2, 4, 0.5];
-  speed.onclick = () => { st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length]; A.video.playbackRate = st.speed; speed.textContent = (st.speed === 0.5 ? '½' : st.speed) + '×'; };
+  const speedCtl = speedControl(A, st, ctx);
+  A.buttons.append(speedCtl.el);
   bar.addEventListener('click', (ev) => {
     const r = bar.getBoundingClientRect();
     const t = from + (ev.clientX - r.left) / r.width * (until - from);
@@ -769,7 +971,7 @@ SCREENS.playback = async (root, p, ctx) => {
     let ok = await A.play('/api/play/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '?from=' + from + '&to=' + until, false, t);
     if (!ok && st.hd) { st.hd = false; sd.classList.add('selected'); hdBtn.classList.remove('selected'); ok = await A.play('/api/play/' + c.id + '/sub?from=' + from + '&to=' + until, false, t); }
     if (!ok) A.notice(tr('The recording is no longer stored'));
-    A.video.playbackRate = st.speed;
+    speedCtl.apply();
   }
   sd.onclick = () => { if (st.hd) { st.hd = false; play(); } };
   hdBtn.onclick = () => { if (!st.hd) { st.hd = true; play(); } };
@@ -777,46 +979,79 @@ SCREENS.playback = async (root, p, ctx) => {
 };
 
 // Download / protect / delete an event
+// downloadEvent: the event's clip as MP4 (the phone: Android's downloads; the browser: a file). say(text) shows progress.
+async function downloadEvent(e, say) {
+  const t = new Date(eventStart(e));
+  const name = 'ArgusSen_' + camName(e.cam).replace(/\s+/g, '_') + '_' + t.getFullYear() + '-' + to(t.getMonth() + 1) + '-' + to(t.getDate()) + '_' + to(t.getHours()) + '-' + to(t.getMinutes()) + '-' + to(t.getSeconds()) + '.mp4';
+  const url = S.server + '/api/events/' + e.id + '/clip.mp4';
+  if (NATIVE && NATIVE.download) {
+    say(NATIVE.download(url, name) ? tr('Downloading … the file goes to Downloads (see the notification).') : tr('Could not start the download.'));
+    return;
+  }
+  say(tr('Downloading …'));
+  try {
+    const b = await api('/api/events/' + e.id + '/clip.mp4', { blob: true });
+    const a = el('a', { href: URL.createObjectURL(b), download: name }); document.body.append(a); a.click(); a.remove();
+    say(tr('Downloaded.'));
+  } catch (err) { say(err.message); }
+}
+// protectEvent: protect the event (or remove the protection – administrators only). Returns the new state.
+async function protectEvent(e) {
+  const r = await api('/api/events/' + e.id + '/keep', { method: 'POST', body: { keep: !e.keep } });
+  e.keep = r.keep;
+  const x = S.events.find((y) => y.id === e.id); if (x) x.keep = e.keep;
+  return e.keep;
+}
+// deleteEvent: asks first; true when it was deleted (administrators only).
+async function deleteEvent(e) {
+  if (!confirm(tr('Delete the event? This cannot be undone.'))) return false;
+  await api('/api/events/' + e.id, { method: 'DELETE' });
+  S.events = S.events.filter((y) => y.id !== e.id);
+  return true;
+}
+const canUnprotect = () => !!(S.user && S.user.admin);
+
 function eventActions(e) {
   const status = el('p', { class: 'hint', role: 'status' });
+  const say = (t) => { status.textContent = t; };
   const protectBtn = el('button', { type: 'button', class: 'btn grey' });
   // everybody may protect an event; only administrators may remove the protection
   const drawProtect = () => { protectBtn.innerHTML = ICON.flag + tr(e.keep ? 'Protected' : 'Protect'); protectBtn.classList.toggle('active', !!e.keep); protectBtn.setAttribute('aria-pressed', e.keep ? 'true' : 'false');
-    protectBtn.disabled = !!e.keep && !(S.user && S.user.admin); };
+    protectBtn.disabled = !!e.keep && !canUnprotect(); };
   drawProtect();
   protectBtn.onclick = async () => {
     try {
-      const r = await api('/api/events/' + e.id + '/keep', { method: 'POST', body: { keep: !e.keep } });
-      e.keep = r.keep; drawProtect();
-      const x = S.events.find((y) => y.id === e.id); if (x) x.keep = e.keep;
-      status.textContent = e.keep ? tr('The event and the recording around it will not be deleted.') : tr('Protection removed – deleted after 30 days as usual.');
-    } catch (err2) { status.textContent = err2.message; }
+      await protectEvent(e); drawProtect();
+      say(e.keep ? tr('The event and the recording around it will not be deleted.') : tr('Protection removed – deleted after 30 days as usual.'));
+    } catch (err) { say(err.message); }
   };
-  const t = new Date(eventStart(e));
-  const name = 'ArgusSen_' + camName(e.cam).replace(/\s+/g, '_') + '_' + t.getFullYear() + '-' + to(t.getMonth() + 1) + '-' + to(t.getDate()) + '_' + to(t.getHours()) + '-' + to(t.getMinutes()) + '-' + to(t.getSeconds()) + '.mp4';
-  const load = el('button', { type: 'button', class: 'btn grey', html: ICON.download + tr('Download video'), onclick: async () => {
-    const url = S.server + '/api/events/' + e.id + '/clip.mp4';
-    if (NATIVE && NATIVE.download) {
-      status.textContent = NATIVE.download(url, name) ? tr('Downloading … the file goes to Downloads (see the notification).') : tr('Could not start the download.');
-      return;
-    }
-    status.textContent = tr('Downloading …');
-    try {
-      const b = await api('/api/events/' + e.id + '/clip.mp4', { blob: true });
-      const a = el('a', { href: URL.createObjectURL(b), download: name }); document.body.append(a); a.click(); a.remove();
-      status.textContent = tr('Downloaded.');
-    } catch (err2) { status.textContent = err2.message; }
-  } });
+  const load = el('button', { type: 'button', class: 'btn grey', html: ICON.download + tr('Download video'), onclick: () => downloadEvent(e, say) });
   const items = [load, protectBtn];
   if (S.user && S.user.admin) items.push(el('button', { type: 'button', class: 'btn grey', html: ICON.trash + tr('Delete'), onclick: async () => {
-    if (!confirm(tr('Delete the event? This cannot be undone.'))) return;
-    try {
-      await api('/api/events/' + e.id, { method: 'DELETE' });
-      S.events = S.events.filter((y) => y.id !== e.id);
-      back();
-    } catch (err2) { status.textContent = err2.message; }
+    try { if (await deleteEvent(e)) back(); } catch (err) { say(err.message); }
   } }));
   return el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, el('div', { class: 'three' }, ...items), status);
+}
+
+// eventIcons: protect, download and delete as small icons next to an event in the list (onGone: it was deleted)
+function eventIcons(e, onGone) {
+  const say = (t) => { if (t && !NATIVE) btnDl.title = t; };
+  const flag = el('button', { type: 'button', class: 'evIcon', html: ICON.flag });
+  const drawFlag = () => {
+    flag.classList.toggle('on', !!e.keep);
+    flag.setAttribute('aria-pressed', e.keep ? 'true' : 'false');
+    flag.setAttribute('aria-label', e.keep ? tr('Protected') : tr('Protect'));
+    flag.title = e.keep ? tr('Protected') : tr('Protect');
+    flag.disabled = !!e.keep && !canUnprotect();
+  };
+  drawFlag();
+  flag.onclick = async (ev) => { ev.stopPropagation(); try { await protectEvent(e); drawFlag(); } catch (err) { alert(err.message); } };
+  const btnDl = el('button', { type: 'button', class: 'evIcon', html: ICON.download, 'aria-label': tr('Download video'), title: tr('Download video'),
+    onclick: (ev) => { ev.stopPropagation(); downloadEvent(e, say); } });
+  const items = [flag, btnDl];
+  if (S.user && S.user.admin) items.push(el('button', { type: 'button', class: 'evIcon', html: ICON.trash, 'aria-label': tr('Delete'), title: tr('Delete'),
+    onclick: async (ev) => { ev.stopPropagation(); try { if (await deleteEvent(e)) onGone(); } catch (err) { alert(err.message); } } }));
+  return el('div', { class: 'eventIcons' }, ...items);
 }
 
 SCREENS.status = (root, p, ctx) => {
@@ -835,10 +1070,20 @@ SCREENS.status = (root, p, ctx) => {
       el('span', { class: 'hint' }, 'App ' + ver + (d ? ' · server ' + d.version + ' · ' + tr('up') + ' ' + uptime(sys.uptime_s) : '')))];
     if (sys && sys.storage_ok === false) items.push(el('p', { class: 'errorText' }, tr('The storage (network drive) is not available – recording is paused.')));
     if (sys && sys.storage_low) items.push(el('p', { class: 'errorText' }, tr('The storage is almost full and only recordings around protected events are left. Protect fewer events, keep recordings for a shorter time or free space.')));
-    if (sys && sys.ai_note === 'experimental') items.push(el('p', { class: 'hint' }, tr('The built-in AI is experimental on this machine (ARM, e.g. Raspberry Pi) and may be slow.')));
+    if (sys && sys.ai_note === 'experimental') items.push(el('p', { class: 'hint do' }, tr('The built-in AI is experimental on this machine (ARM, e.g. Raspberry Pi) and may be slow.')));
     if (sys && sys.storage_local) items.push(el('p', { class: 'errorText' }, tr('The NAS is not responding – recording to the local disk ({gb} GB free). Recordings are moved to the NAS when it is back.', { gb: Math.round(sys.nas.free_gb || 0) })));
     if (sys) {
-      items.push(el('div', { class: 'rings' }, ring('CPU', sys.cpu_pct, '#3DBE6B'), ring('RAM', sys.mem_pct, '#3DBE6B'), ring(S.ha ? tr('Storage') : 'NAS', sys.nas.used_pct || 0, '#5CC8BB')));
+      const own = sys.argussen || {};
+      // with a limit, the ring shows ArgusSen's use of it; otherwise how full the disk/NAS is
+      const storageRing = own.max_gb > 0 && own.used_gb >= 0
+        ? ring('ArgusSen', Math.min(100, 100 * own.used_gb / own.max_gb), '#5CC8BB')
+        : ring(S.ha || S.standalone ? tr('Storage') : 'NAS', sys.nas.used_pct || 0, '#5CC8BB');
+      items.push(el('div', { class: 'rings' }, ring('CPU', sys.cpu_pct, '#3DBE6B'), ring('RAM', sys.mem_pct, '#3DBE6B'), storageRing));
+      // as a Home Assistant app: the rings show the app's own use (not the whole machine)
+      if (sys.app) items.push(el('p', { class: 'hint', style: 'text-align:center' }, tr('The app uses: CPU {cpu} % · RAM {mem} of {limit}', {
+        cpu: (Math.round(sys.cpu_pct * 10) / 10).toString().replace('.', ','),
+        mem: sys.app.mem_mb >= 1000 ? (sys.app.mem_mb / 1000).toFixed(2).replace('.', ',') + ' GB' : sys.app.mem_mb + ' MB',
+        limit: (sys.app.mem_limit_mb / 1000).toFixed(2).replace('.', ',') + ' GB' })));
     }
     try {
       const m = await api('/api/mode');
@@ -853,10 +1098,15 @@ SCREENS.status = (root, p, ctx) => {
       const info = d ? (c.sub_ok && c.main_ok ? tr('recording') : c.sub_ok ? tr('SD only – {f}', { f: c.main_error ? tr(c.main_error) : tr('HD missing') }) : (c.sub_error || tr('no signal'))) : (on ? tr('online') : tr('no signal'));
       items.push(el('div', { class: 'camRow' }, el('span', { class: 'dot' + (on ? '' : ' off') }), el('b', {}, c.name), el('span', {}, info)));
     }
-    if (admin) items.push(el('button', { type: 'button', class: 'btn grey', onclick: () => go('log') }, tr('Show log')));
-    if (sys) items.push(el('div', { class: 'stats' },
-      el('div', {}, tr('Events today'), el('b', {}, sys.events_today)),
-      el('div', {}, S.ha ? tr('Free storage') : tr('Free on NAS'), el('b', {}, Math.round(sys.nas.free_gb || 0) + ' GB'))));
+    if (sys) {
+      const own = sys.argussen || {};
+      const size = (x) => x >= 1000 ? (x / 1000).toFixed(1).replace('.', ',') + ' TB' : Math.round(x) + ' GB';
+      items.push(el('div', { class: 'stats' },
+        el('div', {}, tr('Events today'), el('b', {}, sys.events_today)),
+        own.used_gb >= 0 ? el('div', {}, tr('ArgusSen uses'), el('b', {}, own.max_gb > 0 ? size(own.used_gb) + ' / ' + size(own.max_gb) : size(own.used_gb))) : null,
+        el('div', {}, S.ha || S.standalone ? tr('Free storage') : tr('Free on NAS'),
+          el('b', {}, size(sys.nas.free_gb || 0) + (sys.nas.total_gb ? ' / ' + size(sys.nas.total_gb) : '')))));
+    }
     content.replaceChildren(...items);
   }, 5000);
 };
@@ -897,6 +1147,7 @@ for (const f of ['append', 'prepend', 'replaceChildren']) {
 }
 // ---------- settings: menu with Users, Cameras, General and Log ----------
 const MENU_ICON = {
+  zones: '<svg viewBox="0 0 24 24"><path d="M3 7l7-3 9 4-2 11-11 1z"/><circle cx="3" cy="7" r="1.5" fill="currentColor"/><circle cx="10" cy="4" r="1.5" fill="currentColor"/><circle cx="19" cy="8" r="1.5" fill="currentColor"/><circle cx="17" cy="19" r="1.5" fill="currentColor"/><circle cx="6" cy="20" r="1.5" fill="currentColor"/></svg>',
   userList: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-2-6-5-6.5"/></svg>',
   cameras: '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>',
   general: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg>',
@@ -923,8 +1174,9 @@ function toggleButton(heading2, hint, until, onChange) {
   return b;
 }
 
-function field(label, input, hint) {
-  return el('label', { class: 'field' }, label, input, hint ? el('small', { class: 'hint' }, hint) : null);
+// field: a label with an input and an optional help text (important = something to do or be aware of: bold turquoise)
+function field(label, input, hint, important) {
+  return el('label', { class: 'field' }, label, input, hint ? el('small', { class: important ? 'hint do' : 'hint' }, hint) : null);
 }
 
 SCREENS.settings = (root) => {
@@ -935,7 +1187,7 @@ SCREENS.settings = (root) => {
     content.append(
       menuRow(MENU_ICON.userList, tr('Users'), tr('Create users, camera access, passwords'), () => go('set_users')),
       menuRow(MENU_ICON.cameras, tr('Cameras'), tr('Add and edit cameras, motion and AI'), () => go('set_cameras')));
-    if (S.ha) content.append(menuRow(MENU_ICON.storage, tr('Storage'), tr('Where recordings are stored'), () => go('set_storage')));
+    if (S.ha || S.standalone) content.append(menuRow(MENU_ICON.storage, tr('Storage'), tr('Where recordings are stored'), () => go('set_storage')));
   }
   content.append(menuRow(MENU_ICON.general, tr('General'), tr('Display, my account, app version'), () => go('set_general')));
   if (admin) content.append(menuRow(MENU_ICON.log, tr('Log'), tr('Everything ArgusSen has done'), () => go('log')));
@@ -950,11 +1202,12 @@ function retentionBox(d, gb) {
   const evd = camInput(rt.event_days, { inputmode: 'numeric' });
   const cur = (d.places || []).find((p) => p.current);
   const est = el('p', { class: 'hint' });
+  let maxGB = d.max_gb || 0;
   const showEst = (e) => {
     est.className = 'hint';
     est.textContent = tr('Expected space: about {gb} for the 24/7 recordings (plus HD around events).', { gb: gb(e) });
-    // the place must also keep its minimum free space (Home Assistant's own disk: 10 %, at least 10 GB)
-    if (cur && d.used_gb >= 0 && e > cur.free_gb + d.used_gb - (d.min_free_gb || 0)) {
+    // the place must also keep its minimum free space (Home Assistant's own disk: 10 %, at least 10 GB) – and the limit
+    if ((cur && d.used_gb >= 0 && e > cur.free_gb + d.used_gb - (d.min_free_gb || 0)) || (maxGB > 0 && e > maxGB)) {
       est.className = 'errorText';
       est.textContent += ' ' + tr('That is more than there is room for – the oldest recordings will be deleted before they expire.');
     }
@@ -978,16 +1231,34 @@ function retentionBox(d, gb) {
       showEst(r.estimate_gb || 0); showDefault(true); status.className = 'ok'; status.textContent = tr('Saved.');
     } catch (e) { status.className = 'errorText'; status.textContent = e.message; }
   };
+  // ArgusSen's own limit (GB) – empty = no limit
+  const limit = camInput(maxGB || '', { inputmode: 'numeric', placeholder: tr('No limit') });
+  const limitStatus = el('p', { class: 'hint', role: 'status' });
+  const usedText = el('p', { class: 'hint' }, d.used_gb >= 0
+    ? (maxGB > 0 ? tr('ArgusSen uses {used} of {max}.', { used: gb(d.used_gb), max: gb(maxGB) }) : tr('ArgusSen uses {used}.', { used: gb(d.used_gb) }))
+    : '');
+  const limitBox = el('div', { style: 'display:flex;flex-direction:column;gap:10px' },
+    el('h2', { class: 'small' }, tr('Most space for ArgusSen')),
+    field(tr('Limit in GB'), limit, tr('Empty = no limit. When the recordings take more, the oldest are deleted first – never those around protected events.'), true),
+    usedText,
+    saveButton(tr('Save'), limitStatus, async () => {
+      const r = await api('/api/admin/storage/limit', { method: 'PUT', body: { max_gb: +limit.value || 0 } });
+      maxGB = r.max_gb || 0;
+      limit.value = maxGB || '';
+      if (d.used_gb >= 0) usedText.textContent = maxGB > 0 ? tr('ArgusSen uses {used} of {max}.', { used: gb(d.used_gb), max: gb(maxGB) }) : tr('ArgusSen uses {used}.', { used: gb(d.used_gb) });
+      showEst(r.estimate_gb || 0);
+    }), limitStatus);
   return el('div', { style: 'margin-top:16px;display:flex;flex-direction:column;gap:10px' },
-    el('h2', { class: 'small' }, tr('Keep recordings')), defText,
+    limitBox,
+    el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Keep recordings')), defText,
     el('div', { class: 'to' }, field(tr('Days of 24/7 (SD)'), sub), field(tr('Hours of full resolution (HD)'), main)),
     field(tr('Days of events'), evd, tr('Events keep their HD video. Protected events are never deleted.')),
     est,
+    el('p', { class: 'hint do' }, tr('If the storage gets almost full, ArgusSen deletes the oldest recordings first – never those around protected events.')),
     saveButton(tr('Save'), status, async () => {
       const r = await api('/api/admin/retention', { method: 'PUT', body: { sub_days: +sub.value, main_hours: +main.value, event_days: +evd.value } });
       showEst(r.estimate_gb || 0); showDefault(r.retention_default);
-    }), status, resetBtn,
-    el('p', { class: 'hint' }, tr('If the storage gets almost full, ArgusSen deletes the oldest recordings first – never those around protected events.')));
+    }), status, resetBtn);
 }
 
 SCREENS.set_storage = (root) => {
@@ -1030,11 +1301,17 @@ SCREENS.set_storage = (root) => {
         status.className = 'errorText'; status.textContent = tr('ArgusSen is not responding yet – reload the page in a moment.');
       } catch (e) { status.className = 'errorText'; status.textContent = e.message; saveBtn.disabled = false; }
     };
+    if (!S.ha) { // the standalone server: the folder is a Docker volume, chosen outside ArgusSen
+      content.replaceChildren(el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, ...row),
+        el('p', { class: 'hint do' }, tr('The recordings are stored in the folder that is mapped to /recordings (docker-compose.yml) – for example a NAS share mounted on the machine.')),
+        retentionBox(d, gb));
+      return;
+    }
     content.replaceChildren(
-      d.ok ? el('p', { class: 'hint' }, tr('Choose where new recordings are stored.'))
+      d.ok ? el('p', { class: 'hint lead' }, tr('Choose where new recordings are stored.'))
         : el('p', { class: 'errorText' }, tr('The storage is not available – recording is paused until the network drive is back.')),
       el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, ...row),
-      el('p', { class: 'hint' }, tr('Network drives (NAS) are added in Home Assistant: Settings → System → Storage → Add network storage, with usage "Media". Recordings are stored in the folder "argus" on the drive.')),
+      el('p', { class: 'hint do' }, tr('Network drives (NAS) are added in Home Assistant: Settings → System → Storage → Add network storage, with usage "Media". Recordings are stored in the folder "argus" on the drive.')),
       saveBtn, status, retentionBox(d, gb));
   };
   shown();
@@ -1174,7 +1451,7 @@ SCREENS.set_user = (root, p) => {
     content.append(
       fresh ? field(tr('Username'), name) : null,
       field(fresh ? tr('Password (at least 8 characters)') : tr('New password (empty = unchanged)'), pw, fresh ? null : u.ha ? tr('Only needed to log in from the ArgusSen phone app – in Home Assistant the user is already logged in.') : tr('The user\'s phones are logged out when the password changes')),
-      u.self ? el('p', { class: 'hint' }, tr('This is you – your own admin rights cannot be removed.')) :
+      u.self ? el('p', { class: 'hint do' }, tr('This is you – your own admin rights cannot be removed.')) :
         u.ha ? el('p', { class: 'hint' }, tr(u.admin ? 'Administrator in Home Assistant – admin rights are set in Home Assistant.' : 'Not an administrator in Home Assistant – admin rights are set in Home Assistant.')) :
         toggleButton(tr('Admin'), tr('Can edit cameras, users and settings'), admin, (t) => { admin = t; }),
       el('h2', { class: 'small', style: 'margin-top:6px' }, tr('May see')), kv.el,
@@ -1203,11 +1480,33 @@ SCREENS.set_user = (root, p) => {
 // ---------- cameras ----------
 SCREENS.set_cameras = (root) => {
   const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  const orderBtn = el('button', { type: 'button', class: 'btn grey', hidden: true, onclick: () => orderMode() }, tr('Change order'));
   root.append(topBar(tr('Cameras'), { back: true }), el('div', { class: 'page' }, el('div', { class: 'content' },
-    el('button', { type: 'button', class: 'btn green', html: MENU_ICON.plus + tr('Add camera'), onclick: () => go('set_cam_conn', {}) }), list)));
+    el('button', { type: 'button', class: 'btn green', html: MENU_ICON.plus + tr('Add camera'), onclick: () => go('set_cam_conn', {}) }), list, orderBtn)));
+  // the order is used everywhere (overview, live, timeline) and for all users
+  function orderMode() {
+    const ids = CAMERA_LIST.map((c) => c.id);
+    const status = el('p', { class: 'hint', role: 'status' });
+    const draw = () => list.replaceChildren(el('p', { class: 'hint do' }, tr('Move the cameras up or down, and press Save.')),
+      ...ids.map((id, i) => {
+        const c = CAMERA_LIST.find((x) => x.id === id);
+        const move = (d) => { [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; draw(); };
+        return el('div', { class: 'camRow' }, el('b', { style: 'flex:1' }, c.name),
+          el('button', { type: 'button', class: 'btn grey orderBtn', disabled: i === 0, 'aria-label': tr('Move up'), onclick: () => move(-1) }, '↑'),
+          el('button', { type: 'button', class: 'btn grey orderBtn', disabled: i === ids.length - 1, 'aria-label': tr('Move down'), onclick: () => move(1) }, '↓'));
+      }),
+      saveButton(tr('Save'), status, async () => {
+        await api('/api/admin/cameras/order', { method: 'PUT', body: { ids } });
+        await fetchCameras();
+        go('set_cameras', {}, true);
+      }), status);
+    orderBtn.hidden = true;
+    draw();
+  }
   (async () => {
     try {
       CAMERA_LIST = await api('/api/admin/cameras');
+      orderBtn.hidden = CAMERA_LIST.length < 2;
       list.replaceChildren(...CAMERA_LIST.map((c) => {
         const status = !c.enabled ? tr('disabled') : c.sub_ok ? tr('recording via {m}', { m: (c.main_via || '?') + (c.sub_via && c.sub_via !== c.main_via ? '/' + c.sub_via : '') }) : (c.optional ? tr('switched off') : tr('no connection'));
         const r = menuRow(MENU_ICON.cameras, c.name, c.host + ' · ' + status, () => go('set_camera', { id: c.id }));
@@ -1267,6 +1566,7 @@ SCREENS.set_camera = (root, p) => {
       menuRow(MENU_ICON.userList, tr('2 · Who may see it and operation'), (c.enabled ? tr('Active') : tr('Disabled')) + (c.optional ? ', ' + tr('may be switched off') : '') + ' · ' + (viewers.length ? viewers.join(', ') : tr('only those who see all')), () => go('set_cam_access', { id: c.id })),
       menuRow(MENU_ICON.ha, tr('3 · Home Assistant'), (c.ha_name || c.name) + (c.ha_area ? ' · ' + c.ha_area : ''), () => go('set_cam_ha', { id: c.id })),
       menuRow(MENU_ICON.ai, tr('4 · Motion and AI'), st ? tr('Sensitivity {n}', { n: st.sensitivity }) + ' · ' + (st.objects.length ? st.objects.map(labelName).join(', ') : tr('no events')) : tr('The camera is not running'), () => go('set_cam_ai', { id: c.id })),
+      menuRow(MENU_ICON.zones, tr('5 · Zones'), st ? zoneSummary(st.zones) : tr('The camera is not running'), () => st && go('set_cam_zones', { id: c.id })),
       el('button', { type: 'button', class: 'btn grey', style: 'margin-top:14px', onclick: async () => {
         if (!confirm(tr('Delete the camera {name}?', { name: c.name }) + '\n' + tr('The recordings stay until they expire (14/30 days).'))) return;
         try { await api('/api/admin/cameras/' + c.id, { method: 'DELETE' }); await fetchCameras(); back(); } catch (e) { alert(e.message); }
@@ -1341,7 +1641,7 @@ SCREENS.set_cam_conn = (root, p) => {
         const TIPS = {
           reolink: ['Use the username and password from the Reolink app.', 'In the camera (Reolink app → Settings → Network → Advanced → Server settings): switch on RTSP and HTTPS.', 'Only wired cameras can record 24/7 – battery cameras are not supported.'],
           onvif: ['ONVIF must be switched on in the camera, often under Network or Integration.', 'Try the other usual ONVIF ports: 80, 8000, 8080, 2020.', 'Some brands (e.g. Hikvision, TP-Link) need a separate ONVIF user, created in the camera.', 'If the camera\'s clock is very wrong, ONVIF login can fail – set the time in the camera.'],
-          rtsp: ['RTSP must be switched on in the camera (often port 554).', 'Check the stream paths in the camera\'s manual – they differ between models.', 'The sub stream must be at most 1280 pixels wide.'],
+          rtsp: ['RTSP must be switched on in the camera (often port 554).', 'Check the stream paths in the camera\'s manual – they differ between models.', 'The sub stream must be at most about 1.3 megapixels (e.g. 1280×960).'],
         };
         const tips = d.results.some((x) => !x.ok) ? el('div', { class: 'hint' }, el('b', {}, tr('Things to check:')),
           el('ul', { style: 'margin:4px 0 0 18px;padding:0' }, ...TIPS[k].map((t) => el('li', {}, tr(t))))) : null;
@@ -1355,7 +1655,7 @@ SCREENS.set_cam_conn = (root, p) => {
           if (d.main_path) { mainPath.value = d.main_path; subPath.value = d.sub_path || ''; }
           if (k === 'onvif' && d.model && !name.value) name.value = d.model;
           testResult.replaceChildren(...rows, img,
-            d.warning ? el('p', { class: 'hint' }, tr('The camera does not send H.264. Recording works, but live view and playback need a browser that can show H.265 – choose H.264 in the camera if possible.')) : null,
+            d.warning ? el('p', { class: 'hint do' }, tr('The camera does not send H.264. Recording works, but live view and playback need a browser that can show H.265 – choose H.264 in the camera if possible.')) : null,
             k === 'onvif' && d.main_path ? el('p', { class: 'hint' }, tr('Addresses found: {main} and {sub}', { main: d.main_path, sub: d.sub_path })) : null, tips);
         }
       } catch (e) { testResult.replaceChildren(el('p', { class: 'errorText' }, e.message)); }
@@ -1371,14 +1671,14 @@ SCREENS.set_cam_conn = (root, p) => {
           field(tr('Method'), methodSelect, tr('bc = Reolink\'s own protocol, flv = HTTPS-FLV, rtsp = standard. ArgusSen switches to the next one by itself if a method fails.')));
       } else if (k === 'onvif') {
         typeFields.replaceChildren(
-          field(tr('ONVIF port'), onvifPort, tr('Often 80, 8000 or 8080. ONVIF must be switched on in the camera – some cameras need a separate ONVIF user.')),
-          el('p', { class: 'hint' }, tr('ArgusSen finds the addresses of the main stream (full resolution) and the sub stream (low resolution) itself – press Test connection.')));
+          field(tr('ONVIF port'), onvifPort, tr('Often 80, 8000 or 8080. ONVIF must be switched on in the camera – some cameras need a separate ONVIF user.'), true),
+          el('p', { class: 'hint do' }, tr('ArgusSen finds the addresses of the main stream (full resolution) and the sub stream (low resolution) itself – press Test connection.')));
       } else {
         typeFields.replaceChildren(
           field(tr('Brand'), presetSelect, tr('Fills in the usual addresses for the brand – check them in the camera\'s manual if the test fails.')),
           field(tr('RTSP port'), port),
           field(tr('Main stream (full resolution)'), mainPath, tr('Path such as /stream1 or a whole address rtsp://…')),
-          field(tr('Sub stream (low resolution)'), subPath, tr('Used for motion detection, the timeline and live view on phones – at most 1280 pixels wide.')));
+          field(tr('Sub stream (low resolution)'), subPath, tr('Used for motion detection, the timeline and live view on phones – at most about 1.3 megapixels (e.g. 1280×960).'), true));
       }
     };
     kindSelect.onchange = shown;
@@ -1405,7 +1705,7 @@ SCREENS.set_cam_conn = (root, p) => {
         });
         found.replaceChildren(
           list.length ? el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, ...list) : el('p', { class: 'hint' }, tr('No cameras found.')),
-          el('p', { class: 'hint' }, tr('Searched: {nets}. If your cameras are on another network (for example a separate camera network/VLAN), type it here – Home Assistant must be able to reach it:', { nets: (d.searched || []).join(', ') })),
+          el('p', { class: 'hint do' }, tr('Searched: {nets}. If your cameras are on another network (for example a separate camera network/VLAN), type it here – Home Assistant must be able to reach it:', { nets: (d.searched || []).join(', ') })),
           el('div', { class: 'to' }, rangeInput, el('button', { type: 'button', class: 'btn grey', onclick: () => search.click() }, tr('Search'))));
       } catch (e) { found.replaceChildren(el('p', { class: 'errorText' }, e.message), el('div', { class: 'to' }, rangeInput, el('button', { type: 'button', class: 'btn grey', onclick: () => search.click() }, tr('Search')))); }
       search.disabled = false;
@@ -1429,7 +1729,7 @@ SCREENS.set_cam_conn = (root, p) => {
         await fetchCameras();
       }),
       status,
-      fresh ? el('p', { class: 'hint' }, tr('Once the camera is created, you can choose who may see it, the Home Assistant name and motion/AI.')) : null);
+      fresh ? el('p', { class: 'hint do' }, tr('Once the camera is created, you can choose who may see it, the Home Assistant name and motion/AI.')) : null);
   })();
 };
 
@@ -1483,6 +1783,195 @@ SCREENS.set_cam_ha = (root, p) => {
 };
 
 // 4 · Motion and AI
+// ---------- zones ----------
+// Up to 3 zones and 3 areas to ignore per camera, drawn as polygons on a picture from the camera. The points are saved
+// in the camera's own orientation (0–1); a camera shown rotated 180° is turned here when drawing.
+const ZONE_COLOURS = ['#5CC8BB', '#F59A3C', '#B78CF0'];
+const IGNORE_COLOUR = '#D9483B';
+function zoneSummary(zones) {
+  const z = (zones || []).filter((x) => x.kind === 'zone').length, i = (zones || []).length - z;
+  if (!z && !i) return tr('No zones');
+  return tr('{z} zones, {i} areas to ignore', { z, i });
+}
+function zoneColour(zones, zone) {
+  if (zone.kind === 'ignore') return IGNORE_COLOUR;
+  return ZONE_COLOURS[(parseInt((zone.id || 'z1').slice(1), 10) - 1) % 3] || ZONE_COLOURS[0];
+}
+// zoneName: the name of a zone on a camera (for the events list)
+function zoneName(cam, id) {
+  const z = ((S.cams.find((c) => c.id === cam) || {}).zones || []).find((x) => x.id === id);
+  return z ? z.name : '';
+}
+// zoneSVG: the zones as an SVG over a picture (viewBox 0–1000; the picture's own orientation)
+function zoneSVG(zones, editing) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1000 1000');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('class', 'zones');
+  for (const z of zones) {
+    if (!z.points || z.points.length < 2) continue;
+    const col = zoneColour(zones, z);
+    const poly = document.createElementNS(NS, z.points.length > 2 ? 'polygon' : 'polyline');
+    poly.setAttribute('points', z.points.map(([x, y]) => (x * 1000).toFixed(1) + ',' + (y * 1000).toFixed(1)).join(' '));
+    poly.setAttribute('fill', col);
+    poly.setAttribute('fill-opacity', z === editing ? '0.30' : (z.kind === 'ignore' ? '0.35' : '0.18'));
+    poly.setAttribute('stroke', col);
+    poly.setAttribute('stroke-width', z === editing ? '6' : '4');
+    poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    if (z.kind === 'ignore') poly.setAttribute('stroke-dasharray', '8 6');
+    svg.append(poly);
+  }
+  return svg;
+}
+
+SCREENS.set_cam_zones = (root, p, ctx) => {
+  // the picture fits what is left of the screen; the panel with the instruction, the buttons and the zones stays fixed
+  // above the menu (it scrolls by itself when it is long) – like playing an event
+  const fitArea = el('div', { class: 'fitPlayer zoneFit' });
+  const content = el('div', { class: 'content' });
+  const panel = el('div', { class: 'under-player details zonePanel' }, content);
+  root.append(topBar(tr('Zones'), { back: true }), fitArea, panel);
+  (async () => {
+    let st, cam;
+    try {
+      const d = await api('/api/settings');
+      st = d.cameras.find((x) => x.id === p.id);
+      cam = (await fetchCameras()).find((x) => x.id === p.id);
+    } catch (e) { content.append(el('p', { class: 'errorText' }, e.message)); return; }
+    if (!st || !cam) { content.append(el('p', { class: 'errorText' }, tr('The camera is not running'))); return; }
+    $('.top h1', root).firstChild.textContent = tr('Zones') + ' · ' + cam.name;
+    const flip = cam.rotate === 180;
+    let zones = JSON.parse(JSON.stringify(st.zones || []));
+    let editing = null;
+    const img = el('img', { alt: '', draggable: 'false' });
+    const layer = el('div', { class: 'zoneLayer' });
+    const pic = el('div', { class: 'zonePic', style: rot(cam) }, img, layer);
+    const ratio = (cam.width || 4) / (cam.height || 3);
+    fitArea.append(pic);
+    const resize = () => {
+      const W = fitArea.clientWidth - 16, H = fitArea.clientHeight - 16;
+      if (W <= 0 || H <= 0) return;
+      const w = Math.min(W, H * ratio);
+      pic.style.width = Math.floor(w) + 'px'; pic.style.height = Math.floor(w / ratio) + 'px';
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(fitArea);
+    ctx.cleanup.push(() => ro.disconnect());
+    loadImage(img, '/api/cams/' + cam.id + '/snapshot.jpg');
+    const hint = el('p', { class: 'hint' });
+    const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+    // every change is saved at once (Done and Delete) – there is no separate Save button to forget
+    const saveZones = async () => {
+      status.className = 'hint'; status.textContent = tr('Saving …');
+      try {
+        const r = await api('/api/settings/' + p.id, { method: 'PUT', body: { zones: zones.filter((z) => z !== editing).map((z) => ({ id: z.id, name: z.name || '', kind: z.kind, points: z.points, objects: z.kind === 'zone' ? (z.objects || []) : [] })) } });
+        const keep = editing;
+        zones = (r.zones || []).concat(keep ? [keep] : []);
+        status.className = 'ok'; status.textContent = tr('Saved.');
+        await fetchCameras();
+        return true;
+      } catch (e) { status.className = 'errorText'; status.textContent = e.message; return false; }
+    };
+    const editBox = el('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+    const status = el('p', { class: 'hint', role: 'status' });
+    const objectsAll = ['person', 'car', 'van', 'bicycle', 'motion'];
+    // position of a pointer in the picture (0–1, the camera's own orientation)
+    const at = (ev) => {
+      const r = pic.getBoundingClientRect();
+      let x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+      if (flip) { x = 1 - x; y = 1 - y; }
+      return [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000];
+    };
+    function draw() {
+      layer.replaceChildren(zoneSVG(zones, editing));
+      if (editing) {
+        editing.points.forEach((pt, i) => {
+          const h = el('span', { class: 'zoneHandle', style: 'left:' + (pt[0] * 100) + '%;top:' + (pt[1] * 100) + '%;background:' + zoneColour(zones, editing) });
+          h.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation(); ev.preventDefault();
+            h.setPointerCapture(ev.pointerId);
+            // only the outline and this handle are redrawn while dragging (a new handle would lose the pointer)
+            const move = (e2) => {
+              const pt2 = at(e2);
+              editing.points[i] = pt2;
+              h.style.left = (pt2[0] * 100) + '%'; h.style.top = (pt2[1] * 100) + '%';
+              const old = layer.querySelector('svg.zones');
+              if (old) old.replaceWith(zoneSVG(zones, editing));
+            };
+            h.addEventListener('pointermove', move);
+            h.addEventListener('pointerup', () => { h.removeEventListener('pointermove', move); drawList(); }, { once: true });
+          });
+          layer.append(h);
+        });
+      }
+      hint.className = 'hint do';
+      hint.textContent = !editing ? tr('Add a zone or an area to ignore below. Zones give events their name (e.g. "Person · Driveway"); areas to ignore are left out of motion and AI.')
+        : editing.points.length < 3 ? tr('Tap in the picture to set the corners ({n} of at least 3).', { n: editing.points.length })
+        : tr('Tap to add corners (at most 8), drag a corner to move it.');
+    }
+    pic.addEventListener('pointerdown', (ev) => {
+      if (!editing || editing.points.length >= 8) return;
+      editing.points.push(at(ev));
+      draw(); drawList();
+    });
+    function drawList() {
+      const nz = zones.filter((z) => z.kind === 'zone').length, ni = zones.length - nz;
+      list.replaceChildren(...zones.map((z) => {
+        const row = el('div', { class: 'camRow' + (z === editing ? ' selected' : '') },
+          el('span', { class: 'dot', style: 'background:' + zoneColour(zones, z) }),
+          el('b', { style: 'flex:1' }, z.kind === 'ignore' ? tr('Area to ignore') : (z.name || tr('New zone'))),
+          z === editing ? null : el('button', { type: 'button', class: 'link', onclick: () => { editing = z; draw(); drawList(); drawEdit(); } }, tr('Edit')),
+          el('button', { type: 'button', class: 'link', onclick: async () => {
+            const saved = z.id && z !== editing;
+            if (saved && !confirm(tr('Delete {name}?', { name: z.kind === 'ignore' ? tr('Area to ignore') : z.name }))) return;
+            zones = zones.filter((x) => x !== z); if (editing === z) editing = null; draw(); drawList(); drawEdit();
+            if (saved) { await saveZones(); draw(); drawList(); }
+          } }, tr('Delete')));
+        return row;
+      }),
+      el('div', { class: 'to' },
+        el('button', { type: 'button', class: 'btn grey', disabled: nz >= 3 || !!editing, onclick: () => {
+          editing = { kind: 'zone', name: '', points: [], objects: [] }; zones.push(editing); draw(); drawList(); drawEdit();
+        } }, '+ ' + tr('Zone')),
+        el('button', { type: 'button', class: 'btn grey', disabled: ni >= 3 || !!editing, onclick: () => {
+          editing = { kind: 'ignore', name: '', points: [] }; zones.push(editing); draw(); drawList(); drawEdit();
+        } }, '+ ' + tr('Area to ignore'))));
+    }
+    function drawEdit() {
+      if (!editing) { editBox.replaceChildren(); return; }
+      const z = editing;
+      const parts = [];
+      if (z.kind === 'zone') {
+        const name = camInput(z.name, { maxlength: 30, placeholder: tr('e.g. Driveway') });
+        name.oninput = () => { z.name = name.value; drawList(); };
+        parts.push(field(tr('Name'), name));
+        const chips = el('div', { class: 'chips' });
+        const drawChips = () => chips.replaceChildren(...objectsAll.map((o) => {
+          const on = (z.objects || []).includes(o);
+          return el('button', { type: 'button', class: 'chip' + (on ? ' selected' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: () => {
+            z.objects = on ? z.objects.filter((x) => x !== o) : [...(z.objects || []), o]; drawChips();
+          } }, labelName(o));
+        }));
+        drawChips();
+        parts.push(field(tr('Counts in the zone'), chips, tr('None chosen = all objects.')));
+      }
+      parts.push(el('div', { class: 'to' },
+        el('button', { type: 'button', class: 'btn darkred', onclick: () => { z.points.pop(); draw(); } }, tr('Undo last point')),
+        el('button', { type: 'button', class: 'btn green', onclick: async () => {
+          if (z.points.length < 3) { status.className = 'errorText'; status.textContent = tr('a zone needs 3–8 points'); return; }
+          if (z.kind === 'zone' && !z.name.trim()) { status.className = 'errorText'; status.textContent = tr('give every zone a name'); return; }
+          editing = null;
+          if (!(await saveZones())) { editing = z; }
+          draw(); drawList(); drawEdit();
+        } }, tr('Done and save'))));
+      editBox.replaceChildren(...parts);
+    }
+    draw(); drawList(); drawEdit();
+    content.append(hint, editBox, status, list);
+  })();
+};
+
 SCREENS.set_cam_ai = (root, p) => {
   const content = camPage(root, tr('Motion and AI'));
   motionUI(content, p.id);
@@ -1494,7 +1983,7 @@ async function motionUI(box, id) {
   let d;
   try { d = await api('/api/settings'); } catch (e) { box.append(el('p', { class: 'errorText' }, e.message)); return; }
   const selected = d.cameras.find((x) => x.id === id);
-  if (!selected) { box.append(el('p', { class: 'hint' }, tr('The camera is not running – motion and AI can be changed when it is active.'))); return; }
+  if (!selected) { box.append(el('p', { class: 'hint do' }, tr('The camera is not running – motion and AI can be changed when it is active.'))); return; }
   const status = el('p', { class: 'hint', role: 'status' });
   const send = () => { status.className = 'hint'; status.textContent = tr('Not saved yet.'); };
   const sliderEl = (heading2, fieldName, min, max, step, device, leftText, right) => {
@@ -1623,6 +2112,15 @@ async function haLogin() {
   } catch (e) { return false; }
 }
 
+// setupNeeded: a standalone ArgusSen without any users yet (the web version only).
+async function setupNeeded() {
+  if (!WEB) return false;
+  try {
+    const r = await fetch(S.server + '/api/setup', { cache: 'no-store' });
+    return r.ok && (await r.json()).needed === true;
+  } catch (e) { return false; }
+}
+
 // syncLanguage: remembers ArgusSen's language; if this device follows it and it has changed, the page is reloaded.
 async function syncLanguage() {
   try {
@@ -1642,9 +2140,9 @@ async function syncLanguage() {
 }
 
 async function start() {
-  if (!S.token && !(await haLogin())) { go('login', {}, true); return; }
+  if (!S.token && !(await haLogin())) { go((await setupNeeded()) ? 'setup' : 'login', {}, true); return; }
   NATIVE && NATIVE.login(S.server, S.token);
-  try { const me = await api('/api/me'); S.user = me.user; save('user', S.user); } catch (e) { if (e instanceof AuthError) return; }
+  try { const me = await api('/api/me'); S.user = me.user; S.standalone = !!me.standalone; save('user', S.user); } catch (e) { if (e instanceof AuthError) return; }
   if (await syncLanguage()) return;
   await fetchCameras();
   go('overview', {}, true);

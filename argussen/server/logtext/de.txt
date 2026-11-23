@@ -74,6 +74,14 @@
 73|Home-Assistant-Integration: %v
 74|Home-Assistant-Integration: Discovery antwortete HTTP %d
 75|Die ArgusSen-Integration %s wurde in Home Assistant installiert
+76|Speicher %s: ArgusSens Grenze von %.0f GB ist erreicht – die ältesten %d HD- und %d SD-Dateien gelöscht (%.1f GB)
+77|Speichergrenze für ArgusSen: %.0f GB (gesetzt von %s)
+78|Speichergrenze für ArgusSen: keine (gesetzt von %s)
+79|Kamera %s eingeschaltet von %s
+80|Kamera %s ausgeschaltet von %s
+81|Reihenfolge der Kameras geändert von %s
+82|Anmeldung abgelehnt für %q von %s (Google – ein automatischer Test der App, kein Einbruchsversuch): %v
+83|Zonen für %s geändert von %s: %d Zonen, %d ignorierte Bereiche
 v1|geschützt
 v2|nicht mehr geschützt
 v3|zu Hause
@@ -87,3 +95,7 @@ v10|die Kamera hat keine Bildgröße gesendet
 v11|die Kamera antwortet nicht
 v12|kein Video im Substream
 v13|die App-Optionen
+v14|dem ersten Start
+v15|falscher Benutzername oder falsches Passwort
+v16|zu viele Fehlversuche – in 15 Minuten erneut versuchen
+v17|das aktuelle Passwort ist falsch

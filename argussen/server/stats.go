@@ -2,6 +2,9 @@ package main
 
 import (
 	"crypto/subtle"
+	"encoding/json"
+	"math"
+	"net/http"
 	"os"
 	"runtime"
 	"strconv"
@@ -91,8 +94,58 @@ func (s *Server) sysStats() map[string]any {
 	cpuMu.Lock()
 	cpu := cpuPct
 	cpuMu.Unlock()
-	return map[string]any{"cpu_pct": cpu, "mem_pct": memPct(), "nas": nas, "storage_ok": !s.storagePaused.Load(), "storage_low": s.storageLow.Load(), "ai_note": aiNote(s.cfg), "storage_local": store.useLocal.Load(),
+	argussen := map[string]any{"used_gb": -1.0, "max_gb": s.ev.settings.MaxGB()}
+	if b := usage.Load(); b >= 0 {
+		argussen["used_gb"] = math.Round(float64(b)/1e9*10) / 10
+	}
+	mem := memPct()
+	var app map[string]any
+	if s.cfg.Ingress { // a Home Assistant app: the app's own use (as the app's page in Home Assistant shows it), not the machine's
+		if a := appStats(); a != nil {
+			cpu, mem = a.CPU, a.MemPct
+			app = map[string]any{"mem_mb": math.Round(a.MemUsage / 1e6), "mem_limit_mb": math.Round(a.MemLimit / 1e6)}
+		}
+	}
+	return map[string]any{"cpu_pct": cpu, "mem_pct": mem, "app": app, "nas": nas, "argussen": argussen, "storage_ok": !s.storagePaused.Load(), "storage_low": s.storageLow.Load(), "ai_note": aiNote(s.cfg), "storage_local": store.useLocal.Load(),
 		"uptime_s": int64(time.Since(startTime).Seconds()), "events_today": today}
+}
+
+// appStats: the app's CPU and memory from the Supervisor (cached for 5 seconds); nil if it cannot be asked.
+type appUse struct {
+	CPU      float64 `json:"cpu_percent"`
+	MemUsage float64 `json:"memory_usage"`
+	MemLimit float64 `json:"memory_limit"`
+	MemPct   float64 `json:"memory_percent"`
+}
+
+var appStatsMu sync.Mutex
+var appStatsAt time.Time
+var appStatsLast *appUse
+
+func appStats() *appUse {
+	appStatsMu.Lock()
+	defer appStatsMu.Unlock()
+	if time.Since(appStatsAt) < 5*time.Second {
+		return appStatsLast
+	}
+	appStatsAt = time.Now()
+	req, _ := http.NewRequest("GET", "http://supervisor/addons/self/stats", nil)
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("SUPERVISOR_TOKEN"))
+	resp, err := (&http.Client{Timeout: 3 * time.Second}).Do(req)
+	if err != nil {
+		appStatsLast = nil
+		return nil
+	}
+	defer resp.Body.Close()
+	var r struct {
+		Data appUse `json:"data"`
+	}
+	if resp.StatusCode != 200 || json.NewDecoder(resp.Body).Decode(&r) != nil {
+		appStatsLast = nil
+		return nil
+	}
+	appStatsLast = &r.Data
+	return appStatsLast
 }
 
 // aiNote: "experimental" when the built-in AI runs on ARM (e.g. Raspberry Pi) – built, but not tested there yet.

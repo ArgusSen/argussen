@@ -12,12 +12,13 @@ import (
 )
 
 type Box struct {
-	Label string  `json:"label"` // shown name
-	Conf  float64 `json:"conf"`
-	X1    int     `json:"x1"`
-	Y1    int     `json:"y1"`
-	X2    int     `json:"x2"`
-	Y2    int     `json:"y2"`
+	Label string   `json:"label"` // shown name
+	Conf  float64  `json:"conf"`
+	X1    int      `json:"x1"`
+	Y1    int      `json:"y1"`
+	X2    int      `json:"x2"`
+	Y2    int      `json:"y2"`
+	Zones []string `json:"zones,omitempty"` // the zones its foot point is in (zones.go)
 }
 
 var aiClient = &http.Client{Timeout: 10 * time.Second}

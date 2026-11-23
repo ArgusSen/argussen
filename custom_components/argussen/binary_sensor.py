@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -21,6 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ArgusSenConfigEntry, add
     for cam in hub.cams.values():
         entities += [Motion(hub, cam), Connection(hub, cam)]
         entities += [ObjectSeen(hub, cam, o) for o in OBJECTS]
+        entities += [InZone(hub, cam, zone) for zone in cam.zones]
     add(entities)
 
 
@@ -61,6 +64,27 @@ class ObjectSeen(ArgusSenCamEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return self.obj in self.cam.objects
+
+
+class InZone(ArgusSenCamEntity, BinarySensorEntity):
+    """A zone: on while an event is going on in it (attribute objects: what is there)."""
+
+    _attr_device_class = BinarySensorDeviceClass.OCCUPANCY
+    _attr_translation_key = "zone"
+
+    def __init__(self, hub: ArgusSenHub, cam: CamState, zone: str) -> None:
+        super().__init__(hub, cam, f"zone_{zone}")
+        self.zone = zone
+        self._attr_translation_placeholders = {"zone": cam.zones[zone]}
+
+    @property
+    def is_on(self) -> bool:
+        return any(self.zone in zones for zones in self.cam.ongoing_zones.values())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        # zone_id and camera: so a blueprint can choose a zone by this entity
+        return {"objects": sorted(self.cam.zone_objects(self.zone)), "zone_id": self.zone, "camera": self.cam.id}
 
 
 class StorageLow(ArgusSenEntity, BinarySensorEntity):

@@ -103,12 +103,18 @@ func supervisorNetworks() ([]string, error) {
 	return out, nil
 }
 
-// searchRange: the addresses to search – at most a /22 (1024 addresses). A bigger network is narrowed to the /24
-// around the machine's own address.
-func searchRange(p netip.Prefix) []netip.Addr {
-	if p.Bits() < 24 {
-		p, _ = p.Addr().Prefix(24)
+// narrowNet: a network bigger than /22 (e.g. a /16) is narrowed to the /22 around the machine's own address – the
+// cameras are often in a neighbouring /24 (10.0.0.x for the machine, 10.0.1.x for the cameras).
+func narrowNet(p netip.Prefix) netip.Prefix {
+	if p.Bits() < 22 {
+		p, _ = p.Addr().Prefix(22)
 	}
+	return p
+}
+
+// searchRange: the addresses to search – at most a /22 (1024 addresses).
+func searchRange(p netip.Prefix) []netip.Addr {
+	p = narrowNet(p)
 	if p.Bits() < 22 {
 		return nil
 	}
@@ -381,10 +387,7 @@ func (s *Server) discoverCams(w http.ResponseWriter, r *http.Request) {
 	}
 	var searched []string
 	for _, n := range nets {
-		if n.Bits() < 24 {
-			n, _ = n.Addr().Prefix(24)
-		}
-		searched = append(searched, n.Masked().String())
+		searched = append(searched, narrowNet(n).Masked().String())
 	}
 	writeJSON(w, map[string]any{"cameras": found, "searched": searched})
 }

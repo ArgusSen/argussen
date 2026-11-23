@@ -129,6 +129,9 @@ type Config struct {
 	PublicHosts       []string          `json:"public_hosts"`         // host names (or parts of them) that mean "from outside" (e.g. a tunnel's domain) – the web version is never shown there
 	Language          string            `json:"language"`             // en, da, de, fr, sv, nb, nl: what "Automatic" means outside Home Assistant (language.go) – default en
 	Timezone          string            `json:"timezone"`             // e.g. "Europe/Copenhagen"; empty = the machine's own (TZ)
+	WebEverywhere     bool              `json:"web_everywhere"`       // standalone server: show the web version also through a reverse proxy/tunnel (login is always needed)
+	TrustedProxies    []string          `json:"trusted_proxies"`      // reverse proxies (IPs or networks) whose X-Forwarded-For gives the client's address
+	Standalone        bool              `json:"standalone"`           // the standalone server (Docker): retention and the storage screen are set in ArgusSen like in Home Assistant
 	Ingress           bool              `json:"ingress"`              // runs as a Home Assistant app: login through HA's ingress headers (see ingress.go)
 }
 

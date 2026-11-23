@@ -74,6 +74,14 @@
 73|Home Assistant-integratie: %v
 74|Home Assistant-integratie: discovery antwoordde HTTP %d
 75|De ArgusSen-integratie %s is in Home Assistant geïnstalleerd
+76|Opslag %s: de limiet van ArgusSen van %.0f GB is bereikt – de oudste %d HD- en %d SD-bestanden verwijderd (%.1f GB)
+77|Opslaglimiet voor ArgusSen: %.0f GB (ingesteld door %s)
+78|Opslaglimiet voor ArgusSen: geen (ingesteld door %s)
+79|Camera %s ingeschakeld door %s
+80|Camera %s uitgeschakeld door %s
+81|Volgorde van de camera's gewijzigd door %s
+82|Aanmelding geweigerd voor %q vanaf %s (Google – een automatische test van de app, geen inbraakpoging): %v
+83|Zones voor %s gewijzigd door %s: %d zones, %d genegeerde gebieden
 v1|beschermd
 v2|niet meer beschermd
 v3|thuis
@@ -87,3 +95,7 @@ v10|de camera stuurde geen beeldgrootte
 v11|de camera reageert niet
 v12|geen video in de substream
 v13|de app-opties
+v14|de eerste start
+v15|onjuiste gebruikersnaam of wachtwoord
+v16|te veel mislukte pogingen – probeer het over 15 minuten opnieuw
+v17|het huidige wachtwoord is onjuist

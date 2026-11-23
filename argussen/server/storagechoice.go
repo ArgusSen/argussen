@@ -123,6 +123,15 @@ func diskGB(p string) (free, total float64) {
 }
 
 func (s *Server) storagePlaces() []storagePlace {
+	if !s.cfg.Ingress { // the standalone server: the folder is chosen outside ArgusSen (a Docker volume)
+		typ := "local"
+		if s.cfg.StorageMount != "" || isNetwork(s.cfg.Storage) {
+			typ = "network"
+		}
+		p := storagePlace{Path: s.cfg.Storage, Name: "The recordings folder", Type: typ, Current: true, Mounted: true}
+		p.FreeGB, p.TotalGB = diskGB(s.cfg.Storage)
+		return []storagePlace{p}
+	}
 	places := []storagePlace{{Path: localStorageDir, Name: "Home Assistant's own disk", Type: "local", Mounted: true}}
 	for mp := range netMounts() {
 		places = append(places, storagePlace{Path: filepath.Join(mp, "argus"), Name: "Network drive " + filepath.Base(mp), Type: "network", Mounted: true})
@@ -155,19 +164,36 @@ func (s *Server) storagePlaces() []storagePlace {
 }
 
 func (s *Server) getStorage(w http.ResponseWriter, r *http.Request) {
-	if !s.cfg.Ingress {
+	if !s.cfg.Ingress && !s.cfg.Standalone {
 		http.NotFound(w, r)
 		return
 	}
 	writeJSON(w, map[string]any{"current": s.cfg.Storage, "ok": !s.storagePaused.Load(), "places": s.storagePlaces(),
 		"retention": s.ev.settings.Retention(), "estimate_gb": s.estimateGB(s.ev.settings.Retention()), "min_free_gb": minFreeFor(s.cfg, store.main),
 		"retention_default": s.ev.settings.RetentionIsDefault(), "default_retention": s.ev.settings.DefaultRetention(),
-		"used_gb": usedGB(store.main, 5*time.Second)})
+		"used_gb": currentUsedGB(), "max_gb": s.ev.settings.MaxGB()})
 }
 
 // usedGB: the space ArgusSen's recordings and thumbnails take in root (-1 if it takes longer than limit,
 // e.g. on a slow network drive).
 func usedGB(root string, limit time.Duration) float64 {
+	b := usedBytes(root, limit)
+	if b < 0 {
+		return -1
+	}
+	return math.Round(float64(b)/1e9*10) / 10
+}
+
+// currentUsedGB: ArgusSen's use of the main storage – the background measurement when there is one.
+func currentUsedGB() float64 {
+	if b := usage.Load(); b >= 0 {
+		return math.Round(float64(b)/1e9*10) / 10
+	}
+	return usedGB(store.main, 5*time.Second)
+}
+
+// usedBytes: the bytes ArgusSen's recordings and thumbnails take in root (-1 if it takes longer than limit).
+func usedBytes(root string, limit time.Duration) int64 {
 	deadline := time.Now().Add(limit)
 	var total int64
 	stop := errors.New("stop")
@@ -190,7 +216,7 @@ func usedGB(root string, limit time.Duration) float64 {
 			return -1
 		}
 	}
-	return math.Round(float64(total)/1e9*10) / 10
+	return total
 }
 
 // estimateGB: the space the recordings will take with the retention rt, from the size of each camera's newest
@@ -212,7 +238,7 @@ func (s *Server) estimateGB(rt Retention) float64 {
 func (s *Server) retentionOut() map[string]any {
 	rt := s.ev.settings.Retention()
 	return map[string]any{"retention": rt, "estimate_gb": s.estimateGB(rt), "retention_default": s.ev.settings.RetentionIsDefault(),
-		"default_retention": s.ev.settings.DefaultRetention()}
+		"default_retention": s.ev.settings.DefaultRetention(), "max_gb": s.ev.settings.MaxGB()}
 }
 
 func (s *Server) getRetention(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.retentionOut()) }
@@ -364,4 +390,24 @@ func (s *Server) watchStorage() {
 		case <-t.C:
 		}
 	}
+}
+
+// PUT /api/admin/storage/limit {max_gb}: the most space ArgusSen may take (0 = no limit).
+func (s *Server) putStorageLimit(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		MaxGB float64 `json:"max_gb"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := s.ev.settings.SetMaxGB(math.Round(in.MaxGB)); err != nil {
+		jsonErr(w, 400, err.Error())
+		return
+	}
+	if v := s.ev.settings.MaxGB(); v > 0 {
+		log.Printf("Storage limit for ArgusSen: %.0f GB (set by %s)", v, userOf(r).Name)
+	} else {
+		log.Printf("Storage limit for ArgusSen: none (set by %s)", userOf(r).Name)
+	}
+	writeJSON(w, s.retentionOut())
 }

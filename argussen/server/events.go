@@ -25,6 +25,7 @@ type Event struct {
 	Score  float64   `json:"score"`
 	Boxes  []Box     `json:"boxes"` // on the thumbnail
 	Keep   bool      `json:"keep"`  // protected: never deleted by the cleanup
+	Zones  []string  `json:"zones"` // the zones it has been in (ids, zones.go)
 	thumb  string
 }
 
@@ -43,7 +44,8 @@ type camEvState struct {
 	open        *Event
 	boxes       []Box // latest AI hits (for live view)
 	boxesAt     time.Time
-	lastClosed  *Event // reopened if a new event comes within 30 s
+	lastClosed  *Event   // reopened if a new event comes within 30 s
+	motionZones []string // the zones with motion when the motion began
 }
 
 type EventManager struct {
@@ -69,6 +71,7 @@ func openDB(path string) (*sql.DB, error) {
 		CREATE INDEX IF NOT EXISTS events_cam ON events(cam, start);`)
 	if err == nil {
 		db.Exec(`ALTER TABLE events ADD COLUMN keep INTEGER NOT NULL DEFAULT 0`) // already exists = error, harmless
+		db.Exec(`ALTER TABLE events ADD COLUMN zones TEXT NOT NULL DEFAULT ''`)
 	}
 	return db, err
 }
@@ -95,7 +98,8 @@ func (m *EventManager) LiveBoxes(cam string) []Box {
 }
 
 // Feed is called for every analysed frame (e.g. 5 per second) from the camera's own goroutine.
-func (m *EventManager) Feed(cam *Camera, f *Frame, moving bool) {
+// zones: the zones with motion in this frame (zones.go).
+func (m *EventManager) Feed(cam *Camera, f *Frame, moving bool, zones []string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := m.st[cam.ID]
@@ -105,12 +109,23 @@ func (m *EventManager) Feed(cam *Camera, f *Frame, moving bool) {
 	}
 	if moving {
 		if !s.active {
-			s.active, s.motionStart = true, f.At
+			s.active, s.motionStart, s.motionZones = true, f.At, nil
 		}
 		s.lastMotion = f.At
 		// "motion" chosen as an object: an event as soon as the motion has lasted 2 seconds (also without AI)
+		if len(zones) > 0 {
+			s.motionZones = zones
+		}
 		if s.open == nil && f.At.Sub(s.motionStart) >= 2*time.Second && m.motionEvents(cam.ID) {
 			m.openMotionEvent(cam, s, f)
+		}
+		// a motion event that moves into another zone (AI events get their zones from the hits)
+		if s.open != nil && len(zones) > 0 && contains(s.open.Labels, "motion") && addZones(&s.open.Zones, zones) {
+			sort.Strings(s.open.Zones)
+			m.save(s.open, nil, false)
+			if m.OnEvent != nil {
+				m.OnEvent(*s.open)
+			}
 		}
 		if !s.aiBusy && f.At.Sub(s.lastAI) >= time.Duration(m.cfg.Motion.AIInterval*float64(time.Second)) {
 			s.aiBusy, s.lastAI = true, f.At
@@ -150,6 +165,19 @@ func (m *EventManager) analyze(cam *Camera, f *Frame) {
 		return
 	}
 	now := f.At
+	// zones: a hit counts where its foot point is (the middle of the bottom edge); areas to ignore drop it
+	if zones := m.settings.Get(cam.ID).Zones; len(zones) > 0 && f.W > 0 && f.H > 0 {
+		kept := boxes[:0]
+		for _, b := range boxes {
+			ignored, in := hitZones(zones, float64(b.X1+b.X2)/2/float64(f.W), float64(b.Y2)/float64(f.H), b.Label)
+			if ignored {
+				continue
+			}
+			b.Zones = in
+			kept = append(kept, b)
+		}
+		boxes = kept
+	}
 	s.boxes, s.boxesAt = boxes, now
 	// forget objects not seen for 10 min
 	keep := s.tracks[:0]
@@ -209,8 +237,10 @@ func (m *EventManager) analyze(cam *Camera, f *Frame) {
 		if !contains(e.Labels, b.Label) {
 			e.Labels = append(e.Labels, b.Label)
 		}
+		addZones(&e.Zones, b.Zones)
 	}
 	sort.Strings(e.Labels)
+	sort.Strings(e.Zones)
 	newThumb := score > e.Score
 	if newThumb {
 		e.Score, e.Boxes = score, fresh
@@ -246,7 +276,8 @@ func (m *EventManager) openMotionEvent(cam *Camera, s *camEvState, f *Frame) {
 		s.open, s.lastClosed = e, nil
 		m.save(e, nil, false)
 	} else {
-		e := &Event{Cam: cam.ID, Start: s.motionStart, Labels: []string{"motion"}}
+		e := &Event{Cam: cam.ID, Start: s.motionStart, Labels: []string{"motion"}, Zones: append([]string(nil), s.motionZones...)}
+		sort.Strings(e.Zones)
 		s.open = e
 		jpg, _ := frameJPEG(f, 85)
 		m.save(e, jpg, true)
@@ -287,9 +318,10 @@ func ms(t time.Time) any {
 func (m *EventManager) save(e *Event, jpg []byte, newThumb bool) {
 	boxes, _ := json.Marshal(e.Boxes)
 	labels := strings.Join(e.Labels, ",")
+	zones := strings.Join(e.Zones, ",")
 	if e.ID == 0 {
-		r, err := m.db.Exec(`INSERT INTO events(cam,start,end,labels,score,boxes) VALUES(?,?,?,?,?,?)`,
-			e.Cam, ms(e.Start), ms(e.End), labels, e.Score, string(boxes))
+		r, err := m.db.Exec(`INSERT INTO events(cam,start,end,labels,score,boxes,zones) VALUES(?,?,?,?,?,?,?)`,
+			e.Cam, ms(e.Start), ms(e.End), labels, e.Score, string(boxes), zones)
 		if err != nil {
 			log.Printf("db: %v", err)
 			return
@@ -304,8 +336,8 @@ func (m *EventManager) save(e *Event, jpg []byte, newThumb bool) {
 			e.thumb = rel
 		}
 	}
-	_, err := m.db.Exec(`UPDATE events SET end=?, labels=?, score=?, boxes=?, thumb=COALESCE(?,thumb) WHERE id=?`,
-		ms(e.End), labels, e.Score, string(boxes), nullStr(e.thumb), e.ID)
+	_, err := m.db.Exec(`UPDATE events SET end=?, labels=?, score=?, boxes=?, zones=?, thumb=COALESCE(?,thumb) WHERE id=?`,
+		ms(e.End), labels, e.Score, string(boxes), zones, nullStr(e.thumb), e.ID)
 	if err != nil {
 		log.Printf("db: %v", err)
 	}
@@ -329,7 +361,7 @@ func (m *EventManager) listEvents(cams []string, before time.Time, limit int, ke
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	q := `SELECT id,cam,start,end,labels,score,COALESCE(thumb,''),COALESCE(boxes,''),keep FROM events WHERE start < ?`
+	q := `SELECT id,cam,start,end,labels,score,COALESCE(thumb,''),COALESCE(boxes,''),keep,zones FROM events WHERE start < ?`
 	args := []any{before.UnixMilli()}
 	if keepOnly {
 		q += ` AND keep=1`
@@ -355,9 +387,12 @@ func (m *EventManager) listEvents(cams []string, before time.Time, limit int, ke
 		var e Event
 		var start int64
 		var end sql.NullInt64
-		var labels, boxes string
-		if err := rows.Scan(&e.ID, &e.Cam, &start, &end, &labels, &e.Score, &e.thumb, &boxes, &e.Keep); err != nil {
+		var labels, boxes, zones string
+		if err := rows.Scan(&e.ID, &e.Cam, &start, &end, &labels, &e.Score, &e.thumb, &boxes, &e.Keep, &zones); err != nil {
 			return nil, err
+		}
+		if zones != "" {
+			e.Zones = strings.Split(zones, ",")
 		}
 		e.Start = time.UnixMilli(start)
 		if end.Valid {
@@ -421,11 +456,14 @@ func (m *EventManager) GetEvent(id int64) (*Event, error) {
 	var e Event
 	var start int64
 	var end sql.NullInt64
-	var labels, boxes string
-	err := m.db.QueryRow(`SELECT id,cam,start,end,labels,score,COALESCE(thumb,''),COALESCE(boxes,''),keep FROM events WHERE id=?`, id).
-		Scan(&e.ID, &e.Cam, &start, &end, &labels, &e.Score, &e.thumb, &boxes, &e.Keep)
+	var labels, boxes, zones string
+	err := m.db.QueryRow(`SELECT id,cam,start,end,labels,score,COALESCE(thumb,''),COALESCE(boxes,''),keep,zones FROM events WHERE id=?`, id).
+		Scan(&e.ID, &e.Cam, &start, &end, &labels, &e.Score, &e.thumb, &boxes, &e.Keep, &zones)
 	if err != nil {
 		return nil, err
+	}
+	if zones != "" {
+		e.Zones = strings.Split(zones, ",")
 	}
 	e.Start = time.UnixMilli(start)
 	if end.Valid {

@@ -74,6 +74,14 @@
 73|Intégration Home Assistant : %v
 74|Intégration Home Assistant : la découverte a répondu HTTP %d
 75|L'intégration ArgusSen %s a été installée dans Home Assistant
+76|Stockage %s : la limite d'ArgusSen de %.0f Go est atteinte – suppression des %d fichiers HD et %d fichiers SD les plus anciens (%.1f Go)
+77|Limite de stockage d'ArgusSen : %.0f Go (défini par %s)
+78|Limite de stockage d'ArgusSen : aucune (défini par %s)
+79|Caméra %s activée par %s
+80|Caméra %s désactivée par %s
+81|Ordre des caméras modifié par %s
+82|Connexion refusée pour %q depuis %s (Google – un test automatique de l'app, pas une tentative d'intrusion) : %v
+83|Zones de %s modifiées par %s : %d zones, %d zones ignorées
 v1|protégé
 v2|n'est plus protégé
 v3|à la maison
@@ -87,3 +95,7 @@ v10|la caméra n'a envoyé aucune taille d'image
 v11|la caméra ne répond pas
 v12|pas de vidéo dans le flux secondaire
 v13|les options de l'app
+v14|le premier démarrage
+v15|nom d'utilisateur ou mot de passe incorrect
+v16|trop de tentatives échouées – réessayez dans 15 minutes
+v17|le mot de passe actuel est incorrect

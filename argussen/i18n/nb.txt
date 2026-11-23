@@ -298,7 +298,7 @@
 297|Tester … (opptil 1 minutt)
 298|Kameraet sender ikke H.264. Opptaket virker, men live og avspilling krever en nettleser som kan vise H.265 – velg H.264 i kameraet hvis mulig.
 299|Ukjent kamera
-300|Brukes til bevegelse, tidslinjen og live på telefoner – høyst 1280 piksler bred.
+300|Brukes til bevegelse, tidslinjen og live på telefoner – høyst ca. 1,3 megapiksler (f.eks. 1280×960).
 301|f.eks. 192.168.1.0/24
 302|{name} valgt – fyll inn brukernavn og passord og trykk Test tilkoblingen.
 303|ONVIF (de fleste andre merker)
@@ -329,7 +329,7 @@
 328|Det er mer enn det er plass til – de eldste opptakene slettes før de utløper.
 329|Den innebygde AI-en er eksperimentell på denne maskinen (ARM, f.eks. Raspberry Pi) og kan være treg.
 330|Lagringen er nesten full, og bare opptak rundt beskyttede hendelser er igjen. Beskytt færre hendelser, behold opptak kortere tid eller frigjør plass.
-331|Understrømmen kan være høyst 1280 piksler bred.
+331|Understrømmen kan være høyst ca. 1,3 megapiksler (f.eks. 1280×960).
 332|Dette kan du sjekke:
 333|Denne nettleseren kan ikke vise videoen (kameraet sender sannsynligvis H.265). Velg H.264 i kameraet, eller bruk en nettleser som støtter H.265.
 334|Prøv de andre vanlige ONVIF-portene: 80, 8000, 8080, 2020.
@@ -341,6 +341,47 @@
 340|Standard for denne lagringen
 341|Standarden for denne lagringen ville vært
 342|SD {sub} dager, HD {main} timer, hendelser {ev} dager
+343|Opprett administrator
+344|De to passordene er ikke like
+345|Velkommen til ArgusSen. Opprett den første administratoren – den kan legge til kameraer og brukere og endre alle innstillinger.
+346|Gjenta passordet
+347|Opptaksmappen
+348|Opptakene lagres i mappen som er koblet til /recordings (docker-compose.yml) – for eksempel en NAS-deling som er montert på maskinen.
+349|Ingen grense
+350|ArgusSen bruker {used} av {max}.
+351|ArgusSen bruker {used}.
+352|Største plass til ArgusSen
+353|Grense i GB
+354|Tomt = ingen grense. Tar opptakene mer plass, slettes de eldste først – aldri de rundt beskyttede hendelser.
+355|ArgusSen bruker
+356|Endre rekkefølge
+357|Flytt kameraene opp eller ned, og trykk Lagre.
+358|Flytt opp
+359|Flytt ned
+360|Ferdig
+361|Dra kameraene på plass
+362|Rediger
+363|Sone
+364|Soner
+365|5 · Soner
+366|Ingen soner
+367|{z} soner, {i} ignorerte områder
+368|Legg til en sone eller et område som skal ignoreres nedenfor. Soner gir hendelser navnet sitt (f.eks. "Person · Innkjørsel"); ignorerte områder holdes utenfor bevegelse og AI.
+369|Trykk i bildet for å sette hjørnene ({n} av minst 3).
+370|Trykk for å legge til hjørner (høyst 8), dra et hjørne for å flytte det.
+371|Ignorert område
+372|Ny sone
+373|f.eks. Innkjørsel
+374|Teller i sonen
+375|Ingenting valgt = alle objekter.
+376|Angre siste punkt
+377|Trykk Ferdig på sonen først
+383|Søk kamera eller sone
+384|Ferdig og lagre
+385|Slette {name}?
+386|Saktere
+387|Raskere
+388|Appen bruker: CPU {cpu} % · RAM {mem} av {limit}
 s0|kun admin
 s1|ugyldig forespørsel
 s2|navn og adresse må fylles ut
@@ -383,3 +424,13 @@ s52|andre klipp lages akkurat nå – prøv igjen om litt
 s53|bare administratorer kan fjerne beskyttelsen
 s54|forespørselen må være JSON
 s55|dager med SD må være 1–365, timer med HD 0–720 og dager med hendelser 1–365
+s56|den første administratoren kan bare opprettes fra det lokale nettverket
+s57|ArgusSen er allerede satt opp – logg inn
+s58|oppgi et brukernavn
+s59|grensen må være minst 5 GB (eller tom for ingen grense)
+s60|oppgi hvert kamera én gang
+s61|en sone trenger 3–8 punkter
+s62|gi hver sone et navn
+s63|høyst 3 soner og 3 ignorerte områder per kamera
+s64|en sone må være innenfor bildet
+s65|et sonenavn kan være høyst 30 tegn

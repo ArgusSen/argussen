@@ -25,8 +25,11 @@ func (s *Server) origin(r *http.Request) string {
 	return "local"
 }
 
-// clientIP: the address of the sender.
+// clientIP: the address of the sender (behind a trusted reverse proxy: the address it reports).
 func clientIP(r *http.Request) string {
+	if ip := proxiedIP(r); ip != nil {
+		return ip.String()
+	}
 	h, _, _ := net.SplitHostPort(r.RemoteAddr)
 	return h
 }

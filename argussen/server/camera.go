@@ -360,6 +360,11 @@ func (l *lastLine) err(e error) error {
 }
 
 // liveDir: short HLS segments in RAM for live view (same connection as the recording, no re-encoding).
+// subTooBig: the sub stream is too big for motion detection and phones – or it is the main stream (a Reolink fault:
+// with two connections at almost the same moment, the sub stream can send the main stream). At most about 1.3
+// megapixels and 2560 pixels on the longest side: 640x480, 1280x720, 1280x960 and wide panoramas such as 1536x432 pass.
+func subTooBig(w, h int) bool { return w*h > 1_300_000 || max(w, h) > 2560 }
+
 func liveDir(cam, stream string) string { return filepath.Join("/dev/shm/argus/live", cam, stream) }
 
 func (r *CamRunner) liveArgs(stream string) []string {
@@ -576,7 +581,7 @@ func (r *CamRunner) runSub(ctx context.Context) error {
 	} else if w, h, err = probeSize(ctx, r.cam.urlFor("sub", r.proto("sub"))); err != nil {
 		return err
 	}
-	if max(w, h) > 1280 {
+	if subTooBig(w, h) {
 		return fmt.Errorf("the sub stream sends full resolution (%dx%d)", w, h)
 	}
 	// The analysis frame is always scaled to the size we expect – also if the camera later switches stream.
@@ -609,6 +614,13 @@ func (r *CamRunner) runSub(ctx context.Context) error {
 	}
 	r.setProc("sub", cmd)
 	motionDet := newMotionDetector(w, h, r.cfg.Motion, func() (float64, float64) { return r.ev.settings.Get(r.cam.ID).motion(r.cfg.Motion) })
+	zoneMasks := func() *camMasks { return r.ev.settings.masks(r.cam.ID, motionDet.bw, motionDet.bh) }
+	motionDet.ignore = func() []bool {
+		if m := zoneMasks(); m != nil {
+			return m.ignore
+		}
+		return nil
+	}
 	frameSize := w * h * 3 / 2
 	br := bufio.NewReaderSize(out, frameSize)
 
@@ -672,7 +684,13 @@ func (r *CamRunner) runSub(ctx context.Context) error {
 			log.Printf("%s: running (%dx%d)", r.cam.ID, w, h)
 			first = false
 		}
-		r.ev.Feed(r.cam, f, moving)
+		var zones []string // the zones with motion (only worked out while there is motion)
+		if moving {
+			if m := zoneMasks(); m != nil {
+				zones = m.motionZones(motionDet.Moved())
+			}
+		}
+		r.ev.Feed(r.cam, f, moving, zones)
 	}
 	werr := cmd.Wait()
 	if bcErr != nil {

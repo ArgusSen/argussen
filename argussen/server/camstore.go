@@ -125,6 +125,44 @@ func (s *camStore) Save(c *Camera) error {
 	return nil
 }
 
+// Reorder saves a new order of the cameras (Settings → Cameras → Change order). ids must hold every camera once.
+func (s *camStore) Reorder(ids []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(ids) != len(s.list) {
+		return fmt.Errorf("give every camera once")
+	}
+	byID := map[string]*Camera{}
+	for _, c := range s.list {
+		byID[c.ID] = c
+	}
+	list := make([]*Camera, 0, len(ids))
+	for _, id := range ids {
+		c := byID[id]
+		if c == nil {
+			return fmt.Errorf("give every camera once")
+		}
+		delete(byID, id) // a camera given twice is caught here
+		list = append(list, c)
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	for i, c := range list {
+		if _, err := tx.Exec(`UPDATE cameras SET pos=? WHERE id=?`, i, c.ID); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	s.list = list
+	s.writeList()
+	return nil
+}
+
 func (s *camStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

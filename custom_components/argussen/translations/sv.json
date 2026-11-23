@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Lagringen nästan full"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Hemmaläge"
+      },
+      "camera_active": {
+        "name": "Aktiv"
       }
     },
     "event": {
       "detection": {
         "name": "Detektering",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Person",
+              "car": "Bil",
+              "van": "Skåpbil",
+              "bicycle": "Cykel",
+              "motion": "Rörelse"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} – detektering",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – låg upplösning (lättare)",
         "hd": "HD – full upplösning"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen: omstart krävs",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Starta om Home Assistant",
+            "description": "ArgusSen-appen har installerat en ny version av ArgusSen-integrationen. Starta om Home Assistant för att använda den. Home Assistant startar om nu (det tar ungefär en minut)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Person upptäckt",
+      "car": "Bil upptäckt",
+      "van": "Skåpbil upptäckt",
+      "bicycle": "Cykel upptäckt",
+      "motion": "Rörelse upptäckt",
+      "zone_person": "Person kom in i {subtype}",
+      "zone_car": "Bil kom in i {subtype}",
+      "zone_van": "Skåpbil kom in i {subtype}",
+      "zone_bicycle": "Cykel kom in i {subtype}",
+      "zone_motion": "Rörelse i {subtype}"
     }
   }
 }

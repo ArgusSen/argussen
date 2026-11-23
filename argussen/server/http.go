@@ -106,6 +106,8 @@ func userOf(r *http.Request) *User { u, _ := r.Context().Value(ctxKey{}).(*User)
 func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/login", s.login)
+	mux.HandleFunc("GET /api/setup", s.getSetup)
+	mux.HandleFunc("POST /api/setup", s.postSetup)
 	priv := http.NewServeMux()
 	priv.HandleFunc("POST /api/logout", s.logout)
 	priv.HandleFunc("GET /api/me", s.me)
@@ -135,7 +137,7 @@ func (s *Server) routes() http.Handler {
 	// The web version (the same screens as the phone) – only directly from the local network/VPN, never through a tunnel.
 	web := http.FileServer(http.Dir(s.cfg.WebDir))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if (!lanRequest(r) && !s.isIngress(r)) || s.cfg.WebDir == "" {
+		if (!lanRequest(r) && !s.isIngress(r) && !s.cfg.WebEverywhere) || s.cfg.WebDir == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -243,8 +245,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 	tok, u, err := s.auth.Login(ip, strings.TrimSpace(req.User), req.Password, req.Device)
 	if err != nil {
-		log.Printf("Login refused for %q from %s: %v", req.User, ip, err)
-		s.auth.Record(Access{Type: "refused", UserName: strings.TrimSpace(req.User), IP: ip, Origin: s.origin(r), Device: req.Device})
+		if googleTest(ip) { // Google's automatic test of the app – not an attempt to break in (google.go)
+			log.Printf("Login refused for %q from %s (Google – an automatic test of the app, not an attempt to break in): %v", req.User, ip, err)
+			s.auth.Record(Access{Type: "google", UserName: strings.TrimSpace(req.User), IP: ip, Origin: s.origin(r), Device: "Google test"})
+		} else {
+			log.Printf("Login refused for %q from %s: %v", req.User, ip, err)
+			s.auth.Record(Access{Type: "refused", UserName: strings.TrimSpace(req.User), IP: ip, Origin: s.origin(r), Device: req.Device})
+		}
 		jsonErr(w, 401, err.Error())
 		return
 	}
@@ -260,7 +267,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"user": userOf(r), "version": version, "instance": s.instanceID()})
+	writeJSON(w, map[string]any{"user": userOf(r), "version": version, "instance": s.instanceID(), "standalone": s.cfg.Standalone})
 }
 
 // instanceID: a random id that stays the same for this ArgusSen (the Home Assistant integration recognises it by it).
@@ -289,6 +296,7 @@ type camInfo struct {
 	Post       int       `json:"post_seconds"`
 	EventsOff  bool      `json:"events_off"` // home mode: no events right now
 	Optional   bool      `json:"optional"`   // may be switched off
+	Zones      []Zone    `json:"zones"`      // the camera's zones and areas to ignore (for the live view and Home Assistant)
 }
 
 func (s *Server) camList(w http.ResponseWriter, r *http.Request) {
@@ -302,7 +310,7 @@ func (s *Server) camList(w http.ResponseWriter, r *http.Request) {
 		st := rn.State()
 		cs := s.ev.settings.Get(id)
 		out = append(out, camInfo{ID: id, Name: st.Name, Online: st.SubOK, Width: st.Width, Height: st.Height,
-			Motion: st.Motion, LastMotion: st.LastMotion, Boxes: s.ev.LiveBoxes(id), Rotate: cs.Rotate, Pre: cs.PreSeconds, Post: cs.PostSeconds, EventsOff: admin && s.ev.settings.EventsOff(id), Optional: rn.cam.Optional})
+			Motion: st.Motion, LastMotion: st.LastMotion, Boxes: s.ev.LiveBoxes(id), Rotate: cs.Rotate, Pre: cs.PreSeconds, Post: cs.PostSeconds, EventsOff: admin && s.ev.settings.EventsOff(id), Optional: rn.cam.Optional, Zones: zonesOrEmpty(cs.Zones)})
 	}
 	writeJSON(w, out)
 }
@@ -638,13 +646,26 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cs := s.ev.settings.Get(id)
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&cs); err != nil {
+	oldZones, _ := json.Marshal(cs.Zones)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32768)).Decode(&cs); err != nil {
 		jsonErr(w, 400, "invalid request")
 		return
 	}
 	if err := s.ev.settings.Set(id, cs); err != nil {
 		jsonErr(w, 400, err.Error())
 		return
+	}
+	if newZones, _ := json.Marshal(s.ev.settings.Get(id).Zones); string(newZones) != string(oldZones) {
+		nz, ni := 0, 0
+		for _, z := range s.ev.settings.Get(id).Zones {
+			if z.Kind == "zone" {
+				nz++
+			} else {
+				ni++
+			}
+		}
+		log.Printf("Zones for %s changed by %s: %d zones, %d areas to ignore", id, u.Name, nz, ni)
+		s.haRefresh("") // Home Assistant gets the zones' entities
 	}
 	log.Printf("settings for %s changed by %s: sensitivity %d, AI %d %%, objects %v, rotation %d, before/after %d/%d s, off when home %v", id, u.Name, cs.Sensitivity, cs.MinConfidence, cs.Objects, cs.Rotate, cs.PreSeconds, cs.PostSeconds, cs.HomeOff)
 	writeJSON(w, camSettingsOut{ID: id, Name: cams.Get(id).Name, CamSettings: s.ev.settings.Get(id)})

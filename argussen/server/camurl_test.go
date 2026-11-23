@@ -70,3 +70,24 @@ func TestBrandFromModel(t *testing.T) {
 		}
 	}
 }
+
+func TestSubTooBig(t *testing.T) {
+	for _, c := range []struct {
+		w, h int
+		big  bool
+	}{{640, 480, false}, {1280, 720, false}, {1280, 960, false}, {1536, 432, false}, {896, 672, false},
+		{2560, 1920, true}, {1920, 1080, true}, {7680, 2160, true}, {3840, 2160, true}} {
+		if got := subTooBig(c.w, c.h); got != c.big {
+			t.Errorf("%dx%d: got %v", c.w, c.h, got)
+		}
+	}
+}
+
+func TestIntegrationShowsRepair(t *testing.T) {
+	for v, want := range map[string]bool{"": false, "1.0.0": false, "0.10.1": false, "1.1.0-beta.5": false, "1.1.0-beta.6": true,
+		"1.1.0-beta.12": true, "1.1.0": true, "1.1.1": true, "1.2.0-beta.1": true, "2.0.0": true, "dev": false} {
+		if got := integrationShowsRepair(v); got != want {
+			t.Errorf("%q: got %v", v, got)
+		}
+	}
+}

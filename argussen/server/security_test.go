@@ -322,3 +322,168 @@ func TestDefaultRetention(t *testing.T) {
 		t.Error("a new installation saved a retention")
 	}
 }
+
+// ArgusSen's own limit (Settings → Storage): the oldest recordings are deleted – HD outside events first.
+func TestStorageLimit(t *testing.T) {
+	s := newTestServer(t)
+	root := t.TempDir()
+	day := time.Now().UTC().Add(-48 * time.Hour)
+	write := func(stream string, at time.Time) string {
+		p := filepath.Join(root, "rec", "a", stream, at.Format("20060102"), at.Format("150405")+".ts")
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, make([]byte, 1000), 0o644)
+		return p
+	}
+	var main0, sub0 string
+	for i := 0; i < 10; i++ {
+		at := day.Add(time.Duration(i) * time.Minute).Truncate(time.Minute)
+		m, sb := write("main", at), write("sub", at)
+		if i == 0 {
+			main0, sub0 = m, sb
+		}
+	}
+	defer usage.Store(-1)
+	usage.Store(usedBytes(root, time.Minute))
+	if usage.Load() != 20000 {
+		t.Fatalf("measured %d bytes", usage.Load())
+	}
+	if over, n := keepWithin(root, 0, s.ev); over || n != 0 {
+		t.Error("no limit: nothing may be deleted")
+	}
+	// a limit of 15 000 bytes: down to 14 700 → six HD files go first, the SD files stay
+	if over, n := keepWithin(root, 15000/1e9, s.ev); over || n != 6 {
+		t.Errorf("over=%v deleted=%d", over, n)
+	}
+	if _, err := os.Stat(main0); err == nil {
+		t.Error("the oldest HD file was not deleted")
+	}
+	if _, err := os.Stat(sub0); err != nil {
+		t.Error("an SD file was deleted before the HD files")
+	}
+	if usage.Load() != 14000 {
+		t.Errorf("usage after deleting: %d", usage.Load())
+	}
+	if err := s.ev.settings.SetMaxGB(2); err == nil {
+		t.Error("a limit below 5 GB was accepted")
+	}
+	if err := s.ev.settings.SetMaxGB(500); err != nil || s.ev.settings.MaxGB() != 500 {
+		t.Errorf("limit 500: %v %v", err, s.ev.settings.MaxGB())
+	}
+	s.ev.settings.SetMaxGB(0)
+	if s.ev.settings.MaxGB() != 0 {
+		t.Error("the limit was not removed")
+	}
+}
+
+// The Home Assistant switch "Active": only administrators, and only the enabled flag changes.
+func TestCamEnabled(t *testing.T) {
+	s := newTestServer(t)
+	c := &Camera{ID: "c1", Name: "C1", Host: "192.0.2.1", Enabled: true}
+	normalizeCam(c)
+	if err := cams.Save(c); err != nil {
+		t.Fatal(err)
+	}
+	addUser(t, s, "boss", hashPassword("good password"), true, "*")
+	addUser(t, s, "anna", hashPassword("good password"), false, "*")
+	h := s.routes()
+	put := func(user, body string) int {
+		tok, _, err := s.auth.Login("10.0.0.1", user, "good password", "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := httptest.NewRequest("PUT", "/api/admin/cameras/c1/enabled", strings.NewReader(body))
+		r.RemoteAddr = "10.0.0.1:5000"
+		r.Header.Set("Authorization", "Bearer "+tok)
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	if code := put("anna", `{"enabled":false}`); code == 200 || !cams.Get("c1").Enabled {
+		t.Errorf("a user who is not an administrator switched the camera off (%d)", code)
+	}
+	if code := put("boss", `{}`); code != 400 {
+		t.Errorf("without enabled: %d", code)
+	}
+	if code := put("boss", `{"enabled":false}`); code != 200 || cams.Get("c1").Enabled {
+		t.Errorf("switching off: %d, enabled=%v", code, cams.Get("c1").Enabled)
+	}
+	if got := cams.Get("c1"); got.Host != "192.0.2.1" || got.Name != "C1" {
+		t.Errorf("other settings changed: %+v", got)
+	}
+}
+
+// The order of the cameras: every camera once, saved in the database (survives a restart).
+func TestCamOrder(t *testing.T) {
+	s := newTestServer(t)
+	for _, id := range []string{"x1", "x2", "x3"} {
+		c := &Camera{ID: id, Name: id, Host: "192.0.2.1", Enabled: false}
+		normalizeCam(c)
+		if err := cams.Save(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	addUser(t, s, "boss", hashPassword("good password"), true, "*")
+	tok, _, _ := s.auth.Login("10.0.0.1", "boss", "good password", "test")
+	h := s.routes()
+	put := func(body string) int {
+		r := httptest.NewRequest("PUT", "/api/admin/cameras/order", strings.NewReader(body))
+		r.RemoteAddr = "10.0.0.1:5000"
+		r.Header.Set("Authorization", "Bearer "+tok)
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	for _, bad := range []string{`{"ids":["x3","x1"]}`, `{"ids":["x3","x1","x1"]}`, `{"ids":["x3","x1","nope"]}`} {
+		if code := put(bad); code != 400 {
+			t.Errorf("%s: %d", bad, code)
+		}
+	}
+	if code := put(`{"ids":["x3","x1","x2"]}`); code != 200 {
+		t.Fatalf("reorder: %d", code)
+	}
+	order := func(list []*Camera) string {
+		var ids []string
+		for _, c := range list {
+			ids = append(ids, c.ID)
+		}
+		return strings.Join(ids, ",")
+	}
+	if got := order(cams.All()); got != "x3,x1,x2" {
+		t.Errorf("order: %s", got)
+	}
+	again, err := openCamStore(s.auth.db, s.cfg) // as after a restart
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := order(again.All()); got != "x3,x1,x2" {
+		t.Errorf("order after a restart: %s", got)
+	}
+}
+
+// Google's automatic test of the app: said in the log, not counted as a refused login.
+func TestGoogleTest(t *testing.T) {
+	for ip, want := range map[string]bool{"74.125.209.66": true, "66.249.84.10": true, "142.251.1.1": true,
+		"35.190.1.1": false, "8.8.8.8": false, "192.168.1.9": false, "nonsense": false} {
+		if googleTest(ip) != want {
+			t.Errorf("%s: want %v", ip, want)
+		}
+	}
+	s := newTestServer(t)
+	h := s.routes()
+	r := httptest.NewRequest("POST", "/api/login", strings.NewReader(`{"user":"gzkzof","password":"x","device":"Android-app"}`))
+	r.RemoteAddr = "74.125.209.66:4000"
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 401 {
+		t.Errorf("login: %d", w.Code)
+	}
+	if n := len(s.auth.Accesses(100, 0, "refused")); n != 0 {
+		t.Errorf("counted as %d refused logins", n)
+	}
+	if n := len(s.auth.Accesses(100, 0, "google")); n != 1 {
+		t.Errorf("google tests: %d", n)
+	}
+}

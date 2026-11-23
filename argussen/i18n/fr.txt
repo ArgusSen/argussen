@@ -298,7 +298,7 @@
 297|Test … (jusqu'à 1 minute)
 298|La caméra n'envoie pas de H.264. L'enregistrement fonctionne, mais le direct et la lecture nécessitent un navigateur capable d'afficher le H.265 – choisissez H.264 dans la caméra si possible.
 299|Caméra inconnue
-300|Utilisé pour le mouvement, la chronologie et le direct sur téléphone – au plus 1280 pixels de large.
+300|Utilisé pour le mouvement, la chronologie et le direct sur téléphone – au plus environ 1,3 mégapixel (par ex. 1280×960).
 301|ex. 192.168.1.0/24
 302|{name} choisie – saisissez le nom d'utilisateur et le mot de passe, puis appuyez sur Tester la connexion.
 303|ONVIF (la plupart des autres marques)
@@ -329,7 +329,7 @@
 328|C'est plus que la place disponible – les plus anciens enregistrements seront supprimés avant d'expirer.
 329|L'IA intégrée est expérimentale sur cette machine (ARM, p. ex. Raspberry Pi) et peut être lente.
 330|Le stockage est presque plein et il ne reste que des enregistrements autour d'événements protégés. Protégez moins d'événements, conservez les enregistrements moins longtemps ou libérez de la place.
-331|Le flux secondaire doit faire au plus 1280 pixels de large.
+331|Le flux secondaire doit faire au plus environ 1,3 mégapixel (par ex. 1280×960).
 332|À vérifier :
 333|Ce navigateur ne peut pas afficher cette vidéo (la caméra envoie probablement du H.265). Choisissez H.264 dans la caméra ou utilisez un navigateur compatible H.265.
 334|Essayez les autres ports ONVIF habituels : 80, 8000, 8080, 2020.
@@ -341,6 +341,47 @@
 340|Par défaut pour ce stockage
 341|La valeur par défaut pour ce stockage serait
 342|SD {sub} jours, HD {main} heures, événements {ev} jours
+343|Créer l'administrateur
+344|Les deux mots de passe ne sont pas identiques
+345|Bienvenue dans ArgusSen. Créez le premier administrateur – il peut ajouter des caméras et des utilisateurs et modifier tous les réglages.
+346|Répétez le mot de passe
+347|Le dossier des enregistrements
+348|Les enregistrements sont stockés dans le dossier relié à /recordings (docker-compose.yml) – par exemple un partage NAS monté sur la machine.
+349|Aucune limite
+350|ArgusSen utilise {used} sur {max}.
+351|ArgusSen utilise {used}.
+352|Espace maximal pour ArgusSen
+353|Limite en Go
+354|Vide = aucune limite. Si les enregistrements prennent plus, les plus anciens sont supprimés en premier – jamais ceux autour des événements protégés.
+355|ArgusSen utilise
+356|Changer l'ordre
+357|Déplacez les caméras vers le haut ou le bas, puis appuyez sur Enregistrer.
+358|Monter
+359|Descendre
+360|Terminé
+361|Faites glisser les caméras à leur place
+362|Modifier
+363|Zone
+364|Zones
+365|5 · Zones
+366|Aucune zone
+367|{z} zones, {i} zones ignorées
+368|Ajoutez ci-dessous une zone ou une zone à ignorer. Les zones donnent leur nom aux événements (p. ex. « Personne · Allée ») ; les zones ignorées sont exclues du mouvement et de l'IA.
+369|Touchez l'image pour placer les coins ({n} sur au moins 3).
+370|Touchez pour ajouter des coins (8 au plus), faites glisser un coin pour le déplacer.
+371|Zone ignorée
+372|Nouvelle zone
+373|p. ex. Allée
+374|Compte dans la zone
+375|Rien de choisi = tous les objets.
+376|Annuler le dernier point
+377|Appuyez d'abord sur Terminé pour la zone
+383|Chercher une caméra ou une zone
+384|Terminé et enregistrer
+385|Supprimer {name} ?
+386|Plus lent
+387|Plus rapide
+388|L'app utilise : CPU {cpu} % · RAM {mem} sur {limit}
 s0|réservé aux admins
 s1|requête invalide
 s2|le nom et l'adresse doivent être renseignés
@@ -383,3 +424,13 @@ s52|d'autres clips sont en cours – réessayez dans un instant
 s53|seuls les administrateurs peuvent retirer la protection
 s54|la requête doit être en JSON
 s55|les jours de SD doivent être 1–365, les heures de HD 0–720 et les jours d'événements 1–365
+s56|le premier administrateur ne peut être créé que depuis le réseau local
+s57|ArgusSen est déjà configuré – connectez-vous
+s58|indiquez un nom d'utilisateur
+s59|la limite doit être d'au moins 5 Go (ou vide pour aucune limite)
+s60|indiquez chaque caméra une seule fois
+s61|une zone a besoin de 3 à 8 points
+s62|donnez un nom à chaque zone
+s63|au plus 3 zones et 3 zones ignorées par caméra
+s64|une zone doit être dans l'image
+s65|un nom de zone peut faire au plus 30 caractères

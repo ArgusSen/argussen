@@ -7,6 +7,7 @@ package main
 //	event: event   an event (as in /api/events) when it starts, gets new objects or ends
 //	event: home    {"home": bool}                                                                         – admins only
 //	event: storage {"storage_low": bool}
+//	event: cameras {"changed": true}                                                                       – a camera was added, changed, switched on/off or deleted
 //
 // A comment line is sent every 20 seconds so connections through proxies stay open. Each user only gets the cameras
 // it may see.

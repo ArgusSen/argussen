@@ -86,6 +86,13 @@ Until you choose, the default follows the storage:
 The page shows the expected space, calculated from your cameras' real file sizes, and warns if it does not fit.
 Typical for one 4–5 MP camera: 3–6 GB SD and about 33 GB HD per day.
 
+### Most space for ArgusSen
+
+Under **Settings → Storage → Most space for ArgusSen** you can give ArgusSen a limit in GB (empty = no limit). When
+the recordings take more, the oldest are deleted in the same order as below – never those around protected
+events. How much ArgusSen uses is measured every 10 minutes and shown on the Storage page and the **Status** page
+(the ring shows the use of the limit; the tiles show ArgusSen's use and the free space of the whole disk or share).
+
 ### Full disk protection
 
 ArgusSen keeps free space on every storage place: on Home Assistant's own disk 10 % (at least 10 GB), so
@@ -132,29 +139,58 @@ That is all. For each camera you get a device with:
 
 And for ArgusSen itself: **Home mode** (a switch) and **Storage almost full**.
 
+Each camera also has the switch **Active** (for administrators – the app's integration user is one): off switches the
+camera off in ArgusSen (no recording, no events – like *Active* in the camera's settings), on switches it on again.
+Use it in automations, for example to switch indoor cameras off while you are home. While a camera is off, only this
+switch is shown for it.
+
 The names follow Home Assistant's language. Recordings of events are in Home Assistant's **Media** browser
 (ArgusSen → camera → event).
+
+**Zones**: draw up to 3 zones and 3 areas to ignore per camera in ArgusSen under *Settings → Cameras → camera →
+5 · Zones* – tap the corners on the picture, drag a corner to move it, give the zone a name and choose which objects count
+in it (none = all). An AI hit counts in a zone when its foot point (the middle of the bottom edge of its box) is inside;
+motion counts where the picture moves. Events get the names of their zones, and every zone gets
+`binary_sensor.<camera>_<zone>` (on while something is in the zone, attribute `objects`) and
+`event.<camera>_<zone>_detection`. Areas to ignore (a road, a tree in the wind) are left out of the motion detection and
+the AI. Without zones everything works as before.
 
 **Live video on a dashboard**: add a **Picture entity** (or Picture glance) card with the camera and set
 **Camera view** to **Live** (`camera_view: live`) – the default shows a still image. Camera cards use the light SD
 stream; choose HD under **Settings → Devices & services → ArgusSen → Configure**. Home Assistant only fetches one
 stream per camera, however many screens show it, and stops it when nobody is watching.
 
-**Automations**: every event start, change and end is also sent on Home Assistant's event bus as
-`argussen_event`, with `camera`, `event_id`, `labels`, `new_labels`, `ongoing`, `start` and `end`. Example – a
-notification when a person is seen at the front door:
+**Blueprint – a message with the picture to your phone** (the easiest way): the app puts the blueprint
+**"ArgusSen – notify when something is detected"** into Home Assistant. *Settings → Automations →
+Create automation* → choose it, then pick the **camera**, **what** (person, car, van, bicycle, motion), optionally a
+**zone** (a drop-down of the ArgusSen zones), the **phone** (with the Home Assistant app) and how often at most. With ArgusSen on a separate server, import it:
+[![Import the blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FArgusSen%2Fargussen%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fargussen%2Fnotify.yaml)
+
+**Automations** – your own: *Settings → Automations → Create automation → Add trigger → Device*, choose the
+**camera** (not "ArgusSen", which is the app itself) and pick a trigger:
+
+- **Person detected**, **Car detected**, **Van detected**, **Bicycle detected**, **Motion detected**
+- with zones: **Person came into Driveway** (and the same for car, van, bicycle and motion) for each zone
+
+Example – a notification with the picture when a person is seen at the front door (the same automation in YAML):
 
 ```yaml
 triggers:
-  - trigger: state
-    entity_id: event.front_door_detection
-    attribute: event_type
-    to: person
+  - trigger: device
+    domain: argussen
+    device_id: <the front door camera's device>
+    type: person
 actions:
   - action: notify.mobile_app_my_phone
     data:
       message: "Somebody is at the front door"
+      data:
+        image: /api/camera_proxy/camera.front_door
 ```
+
+For more control every event start, change and end is also sent on Home Assistant's event bus as `argussen_event`,
+with `camera`, `event_id`, `labels`, `new_labels`, `zones`, `zone_names`, `zone_new`, `ongoing`, `start` and `end`.
+The event entities (`event.<camera>_detection`, `event.<camera>_<zone>_detection`) can be used as triggers too.
 
 The action **ArgusSen: Protect event** protects an event (or removes the protection).
 

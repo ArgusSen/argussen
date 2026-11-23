@@ -83,6 +83,7 @@ func main() {
 		cancels: map[string]context.CancelFunc{}, dones: map[string]chan struct{}{}}
 	initStore(cfg)
 	publicHosts = cfg.PublicHosts
+	trustedProxies = parseNets(cfg.TrustedProxies)
 	srv.startLanguage()
 	if cfg.StorageMount != "" && !srv.mainOK() {
 		if store.local != "" {
@@ -98,6 +99,7 @@ func main() {
 	}
 	go srv.watchStorage()
 	go runRetention(ctx, cfg, ev)
+	go srv.measureUsage(ctx)
 	go srv.guardDisks(ctx)
 	go srv.ensureUpdateEntity(ctx)
 	startHA(ctx, srv)

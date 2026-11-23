@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Speicher fast voll"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Zuhause-Modus"
+      },
+      "camera_active": {
+        "name": "Aktiv"
       }
     },
     "event": {
       "detection": {
         "name": "Erkennung",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Person",
+              "car": "Auto",
+              "van": "Transporter",
+              "bicycle": "Fahrrad",
+              "motion": "Bewegung"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} – Erkennung",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – niedrige Auflösung (leichter)",
         "hd": "HD – volle Auflösung"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen: Neustart erforderlich",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Home Assistant neu starten",
+            "description": "Die ArgusSen-App hat eine neue Version der ArgusSen-Integration installiert. Starten Sie Home Assistant neu, um sie zu verwenden. Home Assistant startet jetzt neu (das dauert etwa eine Minute)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Person erkannt",
+      "car": "Auto erkannt",
+      "van": "Transporter erkannt",
+      "bicycle": "Fahrrad erkannt",
+      "motion": "Bewegung erkannt",
+      "zone_person": "Person kam in {subtype}",
+      "zone_car": "Auto kam in {subtype}",
+      "zone_van": "Transporter kam in {subtype}",
+      "zone_bicycle": "Fahrrad kam in {subtype}",
+      "zone_motion": "Bewegung in {subtype}"
     }
   }
 }

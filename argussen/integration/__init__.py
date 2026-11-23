@@ -13,6 +13,7 @@ from homeassistant.helpers.typing import ConfigType
 from .api import ArgusSenAuthError, ArgusSenClient, ArgusSenError
 from .const import CONF_TOKEN, CONF_URL, DOMAIN
 from .hub import ArgusSenHub
+from .restart import async_remember_files
 from .services import async_setup_services
 from .views import ArgusSenClipView
 
@@ -29,6 +30,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Services and the clip view (shared by all ArgusSen servers)."""
     async_setup_services(hass)
     hass.http.register_view(ArgusSenClipView(hass))
+    await async_remember_files(hass)
     return True
 
 

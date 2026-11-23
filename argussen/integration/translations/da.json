@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Lager næsten fuldt"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Hjemme-tilstand"
+      },
+      "camera_active": {
+        "name": "Aktiv"
       }
     },
     "event": {
       "detection": {
         "name": "Registrering",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Person",
+              "car": "Bil",
+              "van": "Varebil",
+              "bicycle": "Cykel",
+              "motion": "Bevægelse"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} – registrering",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – lav opløsning (lettere)",
         "hd": "HD – fuld opløsning"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen: genstart kræves",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Genstart Home Assistant",
+            "description": "ArgusSen-appen har installeret en ny version af ArgusSen-integrationen. Genstart Home Assistant for at bruge den. Home Assistant genstarter nu (det tager cirka et minut)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Person registreret",
+      "car": "Bil registreret",
+      "van": "Varebil registreret",
+      "bicycle": "Cykel registreret",
+      "motion": "Bevægelse registreret",
+      "zone_person": "Person kom ind i {subtype}",
+      "zone_car": "Bil kom ind i {subtype}",
+      "zone_van": "Varebil kom ind i {subtype}",
+      "zone_bicycle": "Cykel kom ind i {subtype}",
+      "zone_motion": "Bevægelse i {subtype}"
     }
   }
 }

@@ -101,9 +101,8 @@ python3 argussen/i18n/build.py   # after changing a translation
 ArgusSen started as a recorder on its own small Linux server, and that is where it is going next as well: a
 **standalone server version** for those who do not run Home Assistant OS, or want the recorder on a separate
 machine. It will be the same ArgusSen – recording, events, live view, the timeline and the web interface – with
-the **built-in AI** included, so one server replaces both the recorder and a separate AI server. It will run as
-a Docker container or directly on Linux (for example in a small virtual machine or container), with its own users and logins, and
-can still be connected to Home Assistant with the integration from HACS.
+the **built-in AI** included. It will run as a Docker container or directly on Linux, with its own users and
+logins, and can still be connected to Home Assistant with the integration from HACS.
 
 This is planned, not ready yet – follow the releases here to hear when it is.
 

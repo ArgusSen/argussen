@@ -59,16 +59,36 @@
       },
       "storage_low": {
         "name": "Opslag bijna vol"
+      },
+      "zone": {
+        "name": "{zone}"
       }
     },
     "switch": {
       "home_mode": {
         "name": "Thuismodus"
+      },
+      "camera_active": {
+        "name": "Actief"
       }
     },
     "event": {
       "detection": {
         "name": "Detectie",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "person": "Persoon",
+              "car": "Auto",
+              "van": "Bestelwagen",
+              "bicycle": "Fiets",
+              "motion": "Beweging"
+            }
+          }
+        }
+      },
+      "zone_detection": {
+        "name": "{zone} – detectie",
         "state_attributes": {
           "event_type": {
             "state": {
@@ -137,6 +157,33 @@
         "sd": "SD – lage resolutie (lichter)",
         "hd": "HD – volledige resolutie"
       }
+    }
+  },
+  "issues": {
+    "restart_required": {
+      "title": "ArgusSen: herstart vereist",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Home Assistant herstarten",
+            "description": "De ArgusSen-app heeft een nieuwe versie van de ArgusSen-integratie geïnstalleerd. Herstart Home Assistant om deze te gebruiken. Home Assistant herstart nu (dat duurt ongeveer een minuut)."
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "person": "Persoon gedetecteerd",
+      "car": "Auto gedetecteerd",
+      "van": "Bestelwagen gedetecteerd",
+      "bicycle": "Fiets gedetecteerd",
+      "motion": "Beweging gedetecteerd",
+      "zone_person": "Persoon kwam in {subtype}",
+      "zone_car": "Auto kwam in {subtype}",
+      "zone_van": "Bestelwagen kwam in {subtype}",
+      "zone_bicycle": "Fiets kwam in {subtype}",
+      "zone_motion": "Beweging in {subtype}"
     }
   }
 }

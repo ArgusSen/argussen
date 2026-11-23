@@ -17,7 +17,9 @@ from .hub import ArgusSenHub, CamState
 
 async def async_setup_entry(hass: HomeAssistant, entry: ArgusSenConfigEntry, add: AddConfigEntryEntitiesCallback) -> None:
     hub = entry.runtime_data
-    add(CamEvent(hub, cam) for cam in hub.cams.values())
+    entities: list[EventEntity] = [CamEvent(hub, cam) for cam in hub.cams.values()]
+    entities += [ZoneEvent(hub, cam, zone) for cam in hub.cams.values() for zone in cam.zones]
+    add(entities)
 
 
 class CamEvent(ArgusSenCamEntity, EventEntity):
@@ -40,4 +42,32 @@ class CamEvent(ArgusSenCamEntity, EventEntity):
         for label in new:
             if label in EVENT_TYPES:
                 self._trigger_event(label, {"event_id": e["id"], "labels": e.get("labels") or [], "start": e.get("start")})
+        self.async_write_ha_state()
+
+
+class ZoneEvent(ArgusSenCamEntity, EventEntity):
+    """Fired when a person, car, van, bicycle (or motion) comes into a zone."""
+
+    _attr_device_class = EventDeviceClass.MOTION
+    _attr_event_types = list(EVENT_TYPES)
+    _attr_translation_key = "zone_detection"
+
+    def __init__(self, hub: ArgusSenHub, cam: CamState, zone: str) -> None:
+        super().__init__(hub, cam, f"zone_{zone}_detection")
+        self.zone = zone
+        self._attr_translation_placeholders = {"zone": cam.zones[zone]}
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, f"{signal_update(self.hub.entry.entry_id)}_zone", self._detected))
+
+    @callback
+    def _detected(self, cam: str, zone: str, new: list[str], e: dict[str, Any]) -> None:
+        if cam != self.cam.id or zone != self.zone:
+            return
+        for label in new:
+            if label in EVENT_TYPES:
+                self._trigger_event(label, {"event_id": e["id"], "labels": e.get("labels") or [], "start": e.get("start"),
+                                            "zone": self.cam.zones[zone]})
         self.async_write_ha_state()

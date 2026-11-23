@@ -24,6 +24,8 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/admin/cameras", s.admin(s.listCams))
 	mux.HandleFunc("POST /api/admin/cameras", s.admin(s.createCam))
 	mux.HandleFunc("PUT /api/admin/cameras/{id}", s.admin(s.updateCam))
+	mux.HandleFunc("PUT /api/admin/cameras/order", s.admin(s.orderCams))
+	mux.HandleFunc("PUT /api/admin/cameras/{id}/enabled", s.admin(s.setCamEnabled))
 	mux.HandleFunc("DELETE /api/admin/cameras/{id}", s.admin(s.deleteCam))
 	mux.HandleFunc("POST /api/admin/cameras/test", s.admin(s.testCam))
 	mux.HandleFunc("GET /api/admin/cameras/discover", s.admin(s.discoverCams))
@@ -37,6 +39,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/admin/language", s.admin(s.putLanguage))
 	mux.HandleFunc("GET /api/admin/retention", s.admin(s.getRetention))
 	mux.HandleFunc("PUT /api/admin/retention", s.admin(s.putRetention))
+	mux.HandleFunc("PUT /api/admin/storage/limit", s.admin(s.putStorageLimit))
 	mux.HandleFunc("GET /api/admin/ha", s.admin(s.getHAOptions))
 	mux.HandleFunc("PUT /api/admin/ha", s.admin(s.putHAOptions))
 }
@@ -303,6 +306,7 @@ func (s *Server) setCamUsers(id string, names []string) error {
 }
 
 func (s *Server) haRefresh(deleted string) {
+	hub.publish("cameras", "", map[string]bool{"changed": true}) // the integration reads the camera list again
 	if s.ha == nil {
 		return
 	}
@@ -389,6 +393,72 @@ func (s *Server) updateCam(w http.ResponseWriter, r *http.Request) {
 	s.haRefresh("")
 	log.Printf("Camera %s changed by %s", id, userOf(r).Name)
 	writeJSON(w, s.camToOut(&c))
+}
+
+// PUT /api/admin/cameras/{id}/enabled {"enabled": bool}: only switches a camera on or off ("Active" in the app) –
+// used by the Home Assistant integration's switch, so automations can turn cameras on and off.
+func (s *Server) setCamEnabled(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	old := cams.Get(id)
+	if old == nil {
+		jsonErr(w, 404, "the camera does not exist")
+		return
+	}
+	var in struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if in.Enabled == nil {
+		jsonErr(w, 400, "invalid request")
+		return
+	}
+	if old.Enabled == *in.Enabled {
+		writeJSON(w, s.camToOut(old))
+		return
+	}
+	c := *old
+	c.Enabled = *in.Enabled
+	if err := cams.Save(&c); err != nil {
+		jsonErr(w, 500, err.Error())
+		return
+	}
+	s.stopCam(id)
+	s.startCam(&c)
+	s.haRefresh("")
+	if c.Enabled {
+		log.Printf("Camera %s switched on by %s", id, userOf(r).Name)
+	} else {
+		log.Printf("Camera %s switched off by %s", id, userOf(r).Name)
+	}
+	writeJSON(w, s.camToOut(&c))
+}
+
+// PUT /api/admin/cameras/order {"ids": [...]}: the order of the cameras everywhere (overview, live, timeline).
+func (s *Server) orderCams(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		IDs []string `json:"ids"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := cams.Reorder(in.IDs); err != nil {
+		jsonErr(w, 400, err.Error())
+		return
+	}
+	s.mu.Lock()
+	ids := s.ids[:0:0]
+	for _, c := range cams.All() {
+		if s.cams[c.ID] != nil {
+			ids = append(ids, c.ID)
+		}
+	}
+	s.ids = ids
+	s.mu.Unlock()
+	s.haRefresh("")
+	log.Printf("Camera order changed by %s", userOf(r).Name)
+	writeJSON(w, map[string]bool{"ok": true})
 }
 
 func (s *Server) deleteCam(w http.ResponseWriter, r *http.Request) {
@@ -515,8 +585,8 @@ func (s *Server) testGeneric(w http.ResponseWriter, r *http.Request, c *Camera) 
 			if codec != "h264" {
 				warn = append(warn, codec)
 			}
-			if stream == "sub" && max(wd, ht) > 1280 {
-				rr.OK, rr.Error = false, fmt.Sprintf("the sub stream is %dx%d – choose a lower resolution (at most 1280) for it in the camera", wd, ht)
+			if stream == "sub" && subTooBig(wd, ht) {
+				rr.OK, rr.Error = false, fmt.Sprintf("the sub stream is %dx%d – choose a lower resolution (at most about 1.3 megapixels) for it in the camera", wd, ht)
 			}
 		}
 		results = append(results, rr)
