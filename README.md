@@ -7,7 +7,8 @@ It records your cameras 24/7, detects people, cars, vans and bicycles with AI, a
 video, a timeline and events right in the Home Assistant sidebar. Everything stays on your own
 hardware – no cloud and no subscription.
 
-> **Version 1.0** – the first stable version. Tested on a home installation with Reolink and D-Link cameras;
+> **Version 1.1** – now with **zones**, a **notification blueprint**, **device triggers** and an **"Active" switch** per
+> camera ([what's new](argussen/CHANGELOG.md)). Tested on a home installation with Reolink and D-Link cameras;
 > feedback and bug reports are welcome under *Issues*.
 
 <p align="center"><img src="docs/screenshots/home-assistant.jpg" alt="ArgusSen in the Home Assistant sidebar: four cameras and the latest events" width="900"></p>
@@ -29,18 +30,25 @@ hardware – no cloud and no subscription.
   hours – and kept longer around events.
 - **Events with AI**: person, car, van, bicycle – with snapshot, the video before and after,
   download as MP4, and "protect" so it is never deleted.
-- **Live view and timeline** with zoom, speed control and jumping between cameras.
+- **Zones**: up to 3 zones and 3 areas to ignore per camera, drawn on the camera picture. Events show where
+  something happened ("Person · Driveway"), and areas to ignore (a road, a tree in the wind) give fewer false events.
+- **Live view and timeline** with zoom, speed from ½× to 64× and jumping between cameras. On a PC the live view
+  fills the screen and the timeline shows the day's events next to the video.
+- **Your own camera order** – drag the cameras into place in the overview.
 - **Find cameras on the network** (ONVIF discovery and RTSP) when adding a camera.
 - **Login through Home Assistant** – no extra users or passwords. HA administrators are ArgusSen
   administrators; others can be limited to certain cameras.
-- **Storage on Home Assistant's disk or a NAS**, chosen inside ArgusSen. If the NAS stops
+- **Storage on Home Assistant's disk or a NAS**, chosen inside ArgusSen, with an optional limit for how much space
+  ArgusSen may use – the oldest recordings are deleted first, never protected events. If the NAS stops
   responding, recording continues locally and is moved to the NAS when it is back.
 - **Built-in AI (optional)** using [Blue Onyx](https://github.com/xnorpx/blue-onyx) and ONNX
   Runtime – or use your own Blue Onyx / CodeProject.AI server, or no AI at all.
 - **A real Home Assistant integration** – set up with one click: cameras with live video for every
-  Home Assistant card, motion and person/car/van/bicycle sensors, event entities for automations, the
-  latest event, a "home mode" switch, and event recordings in Home Assistant's media browser.
-  Also for ArgusSen on a separate server (via HACS).
+  Home Assistant card, motion and person/car/van/bicycle sensors, a sensor per zone, event entities, the
+  latest event, a "home mode" switch, an **"Active" switch per camera**, and event recordings in Home Assistant's
+  media browser. Also for ArgusSen on a separate server (via HACS).
+- **Easy automations**: device triggers such as *"Person detected"* or *"Person came into Driveway"*, and a
+  **blueprint** that sends a notification with the camera picture to your phone – no YAML needed.
 - **Seven languages**: English, German, French, Danish, Swedish, Norwegian and Dutch – both the app
   and the entity names in Home Assistant.
 - **Light**: written in Go; a few percent of one CPU core for several cameras (without AI).
