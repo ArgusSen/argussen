@@ -9,7 +9,7 @@ projects. Thank you to everyone behind them.
 |---|---|---|
 | [Blue Onyx](https://github.com/xnorpx/blue-onyx) by Marcus Asteborg | Built-in AI object detection (the `blue_onyx` program) | MIT |
 | [ONNX Runtime](https://onnxruntime.ai) by Microsoft | Runs the AI models | MIT (+ its own third-party notices) |
-| [hls.js](https://github.com/video-dev/hls.js) 1.5.20 (`argussen/web/hls.min.js`, unchanged release build) | Video playback in the browser | Apache-2.0 |
+| [hls.js](https://github.com/video-dev/hls.js) 1.6.19 (`argussen/web/hls.min.js`, unchanged release build) | Video playback in the browser | Apache-2.0 |
 | [FFmpeg](https://ffmpeg.org) (Debian package) | Recording and live video | LGPL-2.1+ / GPL-2+ (Debian build). Source: https://packages.debian.org/source/trixie/ffmpeg |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) and modernc.org libraries | Database (pure Go SQLite) | BSD-3-Clause |
 | Go standard library and golang.org/x | Server | BSD-3-Clause |

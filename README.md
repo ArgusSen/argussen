@@ -59,7 +59,7 @@ hardware – no cloud and no subscription.
 - Home Assistant OS or Supervised (apps are not available on Container/Core installations).
 - Network cameras (wired or wifi) with a main stream and a sub stream: **Reolink** (optimised, with Reolink's own
   protocol), **ONVIF** cameras (most other brands – the streams are found automatically) or any camera with
-  **RTSP** addresses (presets for Hikvision, Dahua, Axis, TP-Link, Uniview and Foscam). H.264 recommended.
+  **RTSP** addresses (presets for Hikvision, Dahua, Axis, TP-Link, Uniview and Foscam). H.264 or H.265 – H.265 plays on devices that can decode it.
 - Built-in AI: a fairly fast machine – tested on 64-bit PCs (amd64). It is also built for Raspberry Pi
   (aarch64), but is slow there and not tested yet; `external` (your own AI server) or `none` also work.
 

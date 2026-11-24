@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+- **H.265 (HEVC) cameras** (e.g. 4K Reolink like the RLC-820A): live view and playback in HD now work in browsers and
+  apps that can decode H.265 – most newer PCs (Chrome, Edge) and phones. The video player (hls.js) is updated to 1.6.19.
+- The blueprint: if you have changed it yourself, your changes are now kept also after the next restart of the app.
+
 ## 1.1.0
 - Searching the network: a network bigger than /22 (e.g. a /16) is searched as the /22 around the machine, so cameras
   in a neighbouring range are found without typing it.

@@ -25,6 +25,7 @@ func newTestServer(t *testing.T) *Server {
 	t.Cleanup(func() { db.Close() })
 	cfg := &Config{Data: dir, Storage: filepath.Join(dir, "storage"), SubDays: 14, MainHours: 24, EventDays: 30,
 		Labels: map[string]string{"person": "person", "car": "car"}, MinConf: 0.5}
+	initStore(cfg) // event pictures go to the test's own folder, not the source folder
 	if err := initAuthDB(db); err != nil {
 		t.Fatal(err)
 	}

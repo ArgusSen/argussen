@@ -45,8 +45,9 @@ the network, such as `192.168.20.0/24`.
 
 ### Video format
 
-H.264 works everywhere. H.265 (HEVC) is recorded fine, but live view and playback then need a browser that can
-show H.265 – choose H.264 in the camera if possible.
+H.264 works everywhere. H.265 (HEVC, e.g. 4K Reolink cameras) is recorded as it is and can be watched live and
+played back in browsers and apps that can decode H.265 – most newer PCs (Chrome, Edge) and phones can. If a device
+cannot, ArgusSen says so; then choose H.264 for the camera's main stream (in the camera's own app) if possible.
 
 Battery-powered cameras cannot record 24/7 and are not supported.
 
