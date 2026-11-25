@@ -7,6 +7,8 @@ It records your cameras 24/7, detects people, cars, vans and bicycles with AI, a
 video, a timeline and events right in the Home Assistant sidebar. Everything stays on your own
 hardware – no cloud and no subscription.
 
+<p align="center"><a href="https://buymeacoffee.com/argussen"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="40"></a></p>
+
 > **Version 1.1** – now with **zones**, a **notification blueprint**, **device triggers** and an **"Active" switch** per
 > camera ([what's new](argussen/CHANGELOG.md)). Tested on a home installation with Reolink and D-Link cameras;
 > feedback and bug reports are welcome under *Issues*.
@@ -122,3 +124,10 @@ This is planned, not ready yet – follow the releases here to hear when it is.
 [Blue Onyx](https://github.com/xnorpx/blue-onyx) for the AI server.
 
 ArgusSen is an independent project and is not affiliated with Reolink or Home Assistant.
+
+## Support ArgusSen
+
+ArgusSen is free and open source, and it will stay that way. It is made in spare time, and every new camera brand
+means buying a camera to test with. If ArgusSen keeps an eye on your home, a coffee is a lovely way to say thanks:
+
+<a href="https://buymeacoffee.com/argussen"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="40"></a>
