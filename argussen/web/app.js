@@ -41,7 +41,7 @@ const S = {
   server: WEB ? location.origin + location.pathname.replace(/\/[^/]*$/, '') : load('server', STD_SERVER),
   token: load('token', ''),
   user: load('user', null),
-  opt: Object.assign({ boxes: true, liveBoxes: true, mobileSD: true }, load('opt', {})),
+  opt: Object.assign({ boxes: true, liveBoxes: true, mobileSD: true, timeAxis: true }, load('opt', {})),
   seen: load('seen', 0),          // highest event id the user has seen
   lastCam: load('lastCam', ''),
   cams: [],                       // from /api/cams
@@ -73,6 +73,7 @@ const ICON = {
   clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
   full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  photo: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   back10: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></svg>',
   forward10: '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v4h-4"/></svg>',
   previous: '<svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
@@ -185,6 +186,7 @@ function go(name, p, replaceTop) {
   active = { name, p: p || {}, cleanup: [] };
   const root = $('#screen');
   root.replaceChildren();
+  root.dataset.screen = name; // CSS: e.g. the settings pages as a card
   // The bottom menu is shown on all pages except login (and hidden in fullscreen via CSS).
   // Sub-pages highlight the main page they belong to.
   $('#nav').hidden = name === 'login';
@@ -215,7 +217,18 @@ function navGo(name) {
   }
   go(name, {}, true);
 }
-function interval(ctx, f, ms) { f(); const t = setInterval(f, ms); ctx.cleanup.push(() => clearInterval(t)); }
+// interval: repeats f while the screen is open – but not while the page is hidden (another tab, the app in the background,
+// the screen off): then nothing is fetched, and everything is fetched at once when it is shown again.
+const running = new Set();
+// MOUSE: a pointer that can hover (a PC) – the help texts say "click" instead of "tap"
+const MOUSE = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+function interval(ctx, f, ms) {
+  f();
+  const t = setInterval(() => { if (!document.hidden) f(); }, ms);
+  running.add(f);
+  ctx.cleanup.push(() => { clearInterval(t); running.delete(f); });
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) for (const f of [...running]) f(); });
 function setFullscreen(until) {
   document.body.classList.toggle('full', until);
   if (NATIVE) NATIVE.setFullscreen(until);
@@ -268,33 +281,58 @@ function tile(c, ctx, large) {
   const noSignal = el('span', { class: 'noSignal' }, c.optional ? tr('Switched off') : tr('No signal'));
   const f = el('button', { type: 'button', class: 'tile' + (c.height > c.width ? ' tall' : ''), 'data-cam': c.id, 'aria-label': tr('Open {name}', { name: c.name }),
     onclick: () => go('camera', { cam: c.id }) }, img, name, noSignal);
-  let i = 0;
+  // A tile scrolled out of sight does not fetch new images (many cameras on a phone) – it does again as soon as it is seen.
+  let seen = true;
   const refresh = async () => {
     const cc = camById(c.id);
     noSignal.hidden = cc.online;
     if (cc.motion) name.append(motionTag); else motionTag.remove();
     if (cc.events_off) name.append(homeTag); else homeTag.remove();
-    if (cc.online && (await loadImage(img, '/api/cams/' + c.id + '/snapshot.jpg'))) noSignal.hidden = true;
+    if (seen && cc.online && (await loadImage(img, '/api/cams/' + c.id + '/snapshot.jpg'))) noSignal.hidden = true;
   };
-  interval(ctx, () => { if (i++ % 1 === 0) refresh(); }, large ? 1500 : 2000);
+  if (window.IntersectionObserver) {
+    const io = new IntersectionObserver((es) => {
+      const was = seen;
+      seen = es[es.length - 1].isIntersecting;
+      if (seen && !was) refresh();
+    });
+    io.observe(f);
+    ctx.cleanup.push(() => io.disconnect());
+  }
+  interval(ctx, refresh, large ? 1500 : 2000);
   ctx.cleanup.push(() => img.dataset.blob && URL.revokeObjectURL(img.dataset.blob));
   return f;
 }
 
-function eventRowEl(e, compact, onclick) {
+// opts.time: the clock time instead of the camera's name (a list for one camera); opts.lazy: the picture is only fetched
+// when the row comes into sight (a day can have many events); opts.current: the event being shown.
+function eventRowEl(e, compact, onclick, opts) {
+  opts = opts || {};
   const c = camById(e.cam);
   const img = el('img', { alt: '' });
   const frame = withBoxes(img, c, e.boxes, false);
   const mini = el('span', { class: 'thumbnail' }, frame);
   if (e.id > S.seen && !compact) mini.append(el('span', { class: 'fresh', 'aria-label': tr('New') }));
   if (e.keep) mini.append(el('span', { class: 'protected', 'aria-label': tr('Protected'), html: ICON.flag }));
-  loadImage(img, '/api/events/' + e.id + '/thumb.jpg', true);
+  const path = '/api/events/' + e.id + '/thumb.jpg';
+  if (opts.lazy && window.IntersectionObserver && !blobCache.has(path)) {
+    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); loadImage(img, path, true); } }, { rootMargin: '200px' });
+    io.observe(mini);
+  } else loadImage(img, path, true);
   const text = el('span', { class: 'eventText' },
-    el('b', {}, camName(e.cam)),
-    el('span', { class: 'd' }, ago(eventStart(e)) + (compact ? ' · ' + duration(eventEnd(e) - eventStart(e)) : '')),
+    el('b', {}, opts.time ? fmtTime(eventStart(e), true) : camName(e.cam)),
+    el('span', { class: 'd' }, opts.time ? duration(eventEnd(e) - eventStart(e)) : ago(eventStart(e)) + (compact ? ' · ' + duration(eventEnd(e) - eventStart(e)) : '')),
     compact ? null : el('span', { class: 'd' }, duration(eventEnd(e) - eventStart(e))),
     el('span', { class: 'l' }, eventLabel(e)));
-  return el('button', { type: 'button', class: 'eventRow' + (compact ? ' compact' : ''), onclick }, mini, text);
+  const row = el('button', { type: 'button', class: 'eventRow' + (compact ? ' compact' : '') + (opts.current ? ' current' : ''), onclick }, mini, text);
+  if (opts.current) row.setAttribute('aria-current', 'true');
+  return row;
+}
+// dayEventRows: the events of a day as rows with pictures (the column on the right on a PC)
+function dayEventRows(evs, currentId) {
+  const ids = evs.map((x) => x.id);
+  return evs.length ? evs.map((e) => eventRowEl(e, true, () => go('playback', { id: e.id, list: ids, ev: e }, currentId !== undefined), { time: true, lazy: true, current: e.id === currentId }))
+    : [el('p', { class: 'hint' }, tr('No events'))];
 }
 
 // ---------- screens ----------
@@ -328,7 +366,7 @@ SCREENS.login = (root) => {
   el('label', { class: 'field' }, tr('Password'), pw),
   serverField, errorText, btn,
   WEB ? null : el('button', { type: 'button', class: 'server', onclick: () => { serverField.hidden = !serverField.hidden; } }, tr('Server') + ': ' + S.server.replace(/^https?:\/\//, '')),
-  el('p', { class: 'hint', style: 'text-align:center;color:#D3F0EC' }, tr('You stay logged in on this phone')));
+  el('p', { class: 'hint', style: 'text-align:center;color:#D3F0EC' }, tr('You stay logged in on this device')));
   root.append(el('div', { class: 'login' },
     el('div', { class: 'head', html: ICON.eyeColour + '<h1>ARGUSSEN</h1><small>' + tr('CAMERA SYSTEM') + '</small>' }), form));
 };
@@ -373,13 +411,13 @@ SCREENS.overview = (root, p, ctx) => {
   const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
   root.append(topBar('ARGUSSEN', { logo: true, right: [online] }),
     el('div', { class: 'page' }, el('div', { class: 'content' },
-      el('div', { class: 'heading' }, el('h2', {}, tr('Live')), el('span', { class: 'hint' }, tr('Tap to open'))),
+      el('div', { class: 'heading' }, el('h2', {}, tr('Live')), el('span', { class: 'hint' }, MOUSE ? tr('Click to open · hold to move') : tr('Tap to open · hold to move'))),
       grid,
       el('div', { class: 'heading', style: 'margin-top:6px' }, el('h2', {}, tr('Latest events')),
         el('button', { type: 'button', class: 'link', onclick: () => navGo('events') }, tr('See all'))),
       list)));
   let drawn = null; // null = not drawn yet (an empty list must also be drawn)
-  const arrange = S.user && S.user.admin ? arrangeGrid(grid, root.querySelector('.heading'), (key) => { drawn = key; }) : null;
+  const arrange = arrangeGrid(grid, root.querySelector('.heading'), (key) => { drawn = key; }); // everybody: their own order
   interval(ctx, async () => {
     if (arrange && arrange.active()) return; // do not redraw while the cameras are being moved
     const cams = await fetchCameras();
@@ -409,24 +447,20 @@ SCREENS.overview = (root, p, ctx) => {
 // arrangeGrid: administrators hold a camera in the overview for half a second, then drag the cameras into a new
 // order (saved when one is dropped – it is the order for everybody). "Done" ends it.
 function arrangeGrid(grid, heading, onSaved) {
-  let on = false, drag = null, timer = null, start = null, moved = false;
+  // hold a camera, drag it and let go: the new order is saved and that is it (no "Done" to press)
+  let on = false, drag = null, timer = null, start = null, moved = false, swallow = 0;
   const hint = heading.querySelector('.hint');
-  const done = el('button', { type: 'button', class: 'link', hidden: true, onclick: () => setOn(false) }, tr('Done'));
-  heading.append(done);
+  const normal = hint.textContent; // "tap to open · hold to move" (administrators)
   const setOn = (v) => {
-    on = v; grid.classList.toggle('arrange', v); done.hidden = !v;
-    hint.textContent = v ? tr('Drag the cameras into place') : tr('Tap to open');
+    on = v; grid.classList.toggle('arrange', v);
+    hint.textContent = v ? tr('Drag the cameras into place') : normal;
   };
   const tileOf = (t) => t && t.closest && t.closest('.tile');
   const save = async () => {
     const order = [...grid.querySelectorAll('.tile')].map((t) => t.dataset.cam);
     try {
-      // switched-off cameras are not in the overview: they keep their places, the others fill the rest
-      const all = (await api('/api/admin/cameras')).map((c) => c.id);
-      const shown = new Set(order);
-      let k = 0;
-      const ids = all.map((id) => (shown.has(id) ? order[k++] : id));
-      await api('/api/admin/cameras/order', { method: 'PUT', body: { ids } });
+      // the user's own order (only for them); the administrators' default is in Settings → Cameras → Change order
+      await api('/api/me/order', { method: 'PUT', body: { ids: order } });
       onSaved((await fetchCameras()).map((c) => c.id).join());
     } catch (e) { alert(e.message); }
   };
@@ -436,7 +470,6 @@ function arrangeGrid(grid, heading, onSaved) {
     if (!t || !t.dataset.cam) return;
     start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId }; moved = false;
     const begin = () => { drag = t; t.classList.add('dragging'); try { t.setPointerCapture(ev.pointerId); } catch (e) { /* */ } };
-    if (on) { begin(); return; }
     timer = setTimeout(() => { timer = null; setOn(true); if (navigator.vibrate) navigator.vibrate(20); begin(); }, 500);
   });
   grid.addEventListener('pointermove', (ev) => {
@@ -458,12 +491,14 @@ function arrangeGrid(grid, heading, onSaved) {
     if (!drag) return;
     drag.classList.remove('dragging');
     drag = null;
+    setOn(false);
+    swallow = Date.now(); // the click the browser sends after letting go must not open the camera
     if (moved) save();
   };
   grid.addEventListener('pointerup', end);
   grid.addEventListener('pointercancel', end);
-  // while arranging, a tap does not open the camera
-  grid.addEventListener('click', (ev) => { if (on) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+  // while arranging (and just after letting go), a tap does not open the camera
+  grid.addEventListener('click', (ev) => { if (on || Date.now() - swallow < 500) { ev.stopPropagation(); ev.preventDefault(); } }, true);
   return { active: () => on || !!drag };
 }
 
@@ -503,70 +538,175 @@ SCREENS.live = (root, p, ctx) => {
 };
 
 SCREENS.events = (root, p, ctx) => {
-  const st = Object.assign({ filter: 'All', search: '' }, p.filter ? p : {});
+  // A phone: one list, newest first. A PC: one shared time axis down the middle with the events as cards on both sides –
+  // every other event on the other side (zigzag, the cards slot in between), every camera has its own colour, a long
+  // pause is shown on the axis.
+  // "Pick day" shows the events up to the end of that day; "Select" marks several events to protect or delete at once.
+  const st = Object.assign({ filter: 'All', search: '', cam: '', day: null }, p.filter ? p : {});
+  const keep = () => Object.assign(p, { filter: st.filter, search: st.search, cam: st.cam, day: st.day });
+  const wide = window.matchMedia('(min-width: 800px)');
+  const PAGE = 100;
+  const admin = S.user && S.user.admin;
+  // ---- the filters ----
   const chips = el('div', { class: 'chips' });
   const search = el('input', { type: 'search', placeholder: tr('Search camera or zone'), 'aria-label': tr('Search camera or zone'), value: st.search,
-    oninput: () => { st.search = search.value; p.search = st.search; draw(); } });
+    oninput: () => { st.search = search.value; keep(); draw(); } });
+  const camSel = el('select', { class: 'camSelect', 'aria-label': tr('Camera'), onchange: () => { st.cam = camSel.value; keep(); reload(); } });
+  const drawCamSel = () => {
+    camSel.replaceChildren(el('option', { value: '' }, tr('All cameras')), ...S.cams.map((c) => el('option', { value: c.id }, c.name)));
+    if (st.cam && !S.cams.some((c) => c.id === st.cam)) st.cam = '';
+    camSel.value = st.cam;
+    camSel.hidden = S.cams.length < 2;
+  };
+  const dateInput = el('input', { type: 'date', class: 'datePicker', 'aria-label': tr('Pick day') });
+  dateInput.max = new Date().toISOString().slice(0, 10);
+  dateInput.onchange = () => { if (!dateInput.value) return; const [y, m, d] = dateInput.value.split('-').map(Number); st.day = new Date(y, m - 1, d).getTime(); keep(); reload(); };
+  const dayChip = el('button', { type: 'button', class: 'chip' });
+  const drawDayChip = () => {
+    if (st.day === null) { dayChip.textContent = tr('Pick day'); dayChip.classList.remove('selected'); dayChip.onclick = () => (dateInput.showPicker ? dateInput.showPicker() : dateInput.click()); dayChip.removeAttribute('aria-label'); return; }
+    dayChip.textContent = tr('Up to {date}', { date: new Date(st.day).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) }) + '  ×';
+    dayChip.classList.add('selected'); dayChip.setAttribute('aria-label', tr('Show the newest again'));
+    dayChip.onclick = () => { st.day = null; keep(); reload(); };
+  };
+  const selectChip = el('button', { type: 'button', class: 'chip', onclick: () => setSelecting(!selecting) }, tr('Select'));
   const list = el('div');
-  const moreBtn = el('button', { type: 'button', class: 'moreBtn', hidden: true, onclick: () => loadMore() }, tr('Load older events'));
-  const page = el('div', { class: 'page' }, list, moreBtn);
+  const page = el('div', { class: 'page' }, list);
+  const bar = el('div', { class: 'bulkBar', hidden: true });
   root.append(topBar(tr('Events')),
-    el('div', { class: 'filters' }, el('label', { class: 'search', html: ICON.search }, search), chips), page);
-  // back from an event: the list is shown as it was (the loaded events and how far down it was scrolled)
-  let allItems = p._items || [];
-  let protectedEvents = p._protected || [];
-  ctx.cleanup.push(() => { p._items = allItems; p._protected = protectedEvents; p._scroll = page.scrollTop; });
+    el('div', { class: 'filters' }, el('div', { class: 'searchRow' }, el('label', { class: 'search', html: ICON.search }, search), camSel),
+      el('div', { class: 'filterRow' }, chips, el('div', { class: 'chips' }, dayChip, selectChip)), dateInput), page, bar);
+  // ---- the data: one list per key ('' = all cameras, or a camera's id) ----
+  let lists = p._lists || {};
+  ctx.cleanup.push(() => { p._lists = lists; p._scroll = page.scrollTop; });
+  const keys = () => [st.cam || ''];
+  const size = () => PAGE;
+  async function load(key, older) {
+    const L = lists[key] || (lists[key] = { items: [], more: false });
+    const before = older && L.items.length ? eventStart(L.items[L.items.length - 1]) : (st.day !== null ? st.day + DAY_MS : 0);
+    const q = '/api/events?limit=' + size() + (key ? '&cam=' + encodeURIComponent(key) : '') + (st.filter === 'Protected' ? '&keep=1' : '') + (before ? '&before=' + before : '');
+    try { const got = await api(q); L.items = older ? L.items.concat(got) : got; L.more = got.length >= size(); } catch (e) { /* keep what we have */ }
+  }
+  async function reload() {
+    lists = {}; setSelecting(false); drawDayChip(); page.scrollTop = 0;
+    await Promise.all(keys().map((k) => load(k, false)));
+    draw();
+  }
+  // ---- selecting several ----
+  let selecting = false;
+  const picked = new Map(); // id -> event
+  function setSelecting(on) {
+    selecting = on; picked.clear();
+    selectChip.classList.toggle('selected', on);
+    root.classList.toggle('picking', on);
+    drawBar(); draw();
+  }
+  function drawBar() {
+    bar.hidden = !selecting;
+    if (!selecting) return;
+    const n = picked.size;
+    const protect = el('button', { type: 'button', class: 'btn grey', disabled: !n, html: ICON.flag + tr('Protect'), onclick: async () => {
+      for (const e of picked.values()) if (!e.keep) { try { await protectEvent(e); } catch (err) { alert(err.message); break; } }
+      setSelecting(false);
+    } });
+    const del = admin ? el('button', { type: 'button', class: 'btn grey', disabled: !n, html: ICON.trash + tr('Delete'), onclick: async () => {
+      if (!confirm(tr('Delete {n} events? This cannot be undone.', { n }))) return;
+      const gone = new Set();
+      for (const e of picked.values()) { try { await api('/api/events/' + e.id, { method: 'DELETE' }); gone.add(e.id); } catch (err) { alert(err.message); break; } }
+      for (const L of Object.values(lists)) L.items = L.items.filter((x) => !gone.has(x.id));
+      S.events = S.events.filter((x) => !gone.has(x.id));
+      setSelecting(false);
+    } }) : null;
+    bar.replaceChildren(el('span', { class: 'bulkCount' }, n ? tr('{n} selected', { n }) : tr('Tap the events to select them')), protect, del,
+      el('button', { type: 'button', class: 'btn grey', onclick: () => setSelecting(false) }, tr('Cancel')));
+  }
+  // ---- drawing ----
   const drawChips = () => chips.replaceChildren(...['All', ...LABELS, 'Protected'].map((n) =>
     el('button', { type: 'button', class: 'chip' + (st.filter === n ? ' selected' : ''), 'aria-pressed': st.filter === n ? 'true' : 'false',
-      onclick: async () => {
-        st.filter = n; p.filter = n; drawChips();
-        if (n === 'Protected') { try { protectedEvents = await api('/api/events?keep=1&limit=500'); } catch (e) { protectedEvents = []; } }
-        draw();
-      } }, tr(n))));
-  function draw() {
+      onclick: () => { const reloadNeeded = (n === 'Protected') !== (st.filter === 'Protected'); st.filter = n; keep(); drawChips(); if (reloadNeeded) reload(); else draw(); } }, tr(n))));
+  const matches = (e) => {
     const q = st.search.trim().toLowerCase();
-    const source = st.filter === 'Protected' ? protectedEvents : allItems;
-    const shown = source.filter((e) => (st.filter === 'All' || st.filter === 'Protected' || (e.labels || []).includes(st.filter.toLowerCase()))
-      && (!q || camName(e.cam).toLowerCase().includes(q) || (e.zones || []).some((z) => zoneName(e.cam, z).toLowerCase().includes(q))));
-    const items = [];
+    return (st.filter === 'All' || st.filter === 'Protected' || (e.labels || []).includes(st.filter.toLowerCase()))
+      && (!q || camName(e.cam).toLowerCase().includes(q) || (e.zones || []).some((z) => zoneName(e.cam, z).toLowerCase().includes(q)));
+  };
+  // one event: a row with its picture; in select mode a tap marks it
+  const item = (e, shown, compact, opts) => {
+    const open = () => {
+      if (selecting) { if (picked.has(e.id)) picked.delete(e.id); else picked.set(e.id, e); row.classList.toggle('picked', picked.has(e.id)); drawBar(); return; }
+      go('playback', { id: e.id, list: shown.map((x) => x.id) });
+    };
+    const row = el('div', { class: 'eventItem' + (picked.has(e.id) ? ' picked' : '') },
+      eventRowEl(e, compact, open, opts || { lazy: true }),
+      eventIcons(e, () => { for (const L of Object.values(lists)) L.items = L.items.filter((x) => x.id !== e.id); draw(); }));
+    return row;
+  };
+  // the events with a heading per day
+  const withDays = (evs, compact) => {
+    const out = [];
     let day = '';
-    for (const e of shown) {
+    for (const e of evs) {
       const d = dayName(eventStart(e));
-      if (d !== day) { day = d; items.push(el('h2', { class: 'small day' }, d)); }
-      items.push(el('div', { class: 'eventItem' }, eventRowEl(e, false, () => go('playback', { id: e.id, list: shown.map((x) => x.id) })),
-        eventIcons(e, () => { allItems = allItems.filter((x) => x.id !== e.id); protectedEvents = protectedEvents.filter((x) => x.id !== e.id); draw(); })));
+      if (d !== day) { day = d; out.push(el('h2', { class: 'small day' }, d)); }
+      out.push(item(e, evs, compact));
     }
-    list.replaceChildren(...(items.length ? items : [el('p', { class: 'empty' }, st.filter === 'Protected' ? tr('No protected events') : allItems.length ? tr('No events match the filter') : tr('No events yet'))]));
-    moreBtn.hidden = allItems.length < 100 || st.filter === 'Protected';
+    return out;
+  };
+  const moreButton = (key) => el('button', { type: 'button', class: 'moreBtn', onclick: async (ev) => { ev.target.disabled = true; await load(key, true); draw(); } }, tr('Load older events'));
+  // the PC view: legend (a camera's colour; a tap shows only that camera), the axis with time, days and long pauses
+  const TLV_COLOURS = ['#5CC8BB', '#F59A3C', '#8AB4F8', '#EF8A80', '#BA9BE6', '#F2D165', '#7BD88F', '#F28CC4'];
+  const camColour = (id) => TLV_COLOURS[Math.max(0, S.cams.findIndex((c) => c.id === id)) % TLV_COLOURS.length];
+  const gapText = (ms) => { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : tr('{h} h {m} min', { h: Math.floor(m / 60), m: m % 60 }); };
+  function timelineView(evs, L, key) {
+    const legend = el('div', { class: 'tlvLegend' },
+      el('button', { type: 'button', class: 'chip' + (st.cam ? '' : ' selected'), 'aria-pressed': st.cam ? 'false' : 'true',
+        onclick: () => { if (!st.cam) return; st.cam = ''; keep(); drawCamSel(); reload(); } }, tr('All')),
+      ...S.cams.map((c) => el('button', { type: 'button', class: 'chip tlvKey' + (st.cam === c.id ? ' selected' : ''),
+      style: '--c:' + camColour(c.id), 'aria-pressed': st.cam === c.id ? 'true' : 'false',
+      onclick: () => { st.cam = st.cam === c.id ? '' : c.id; keep(); drawCamSel(); reload(); } }, el('span', { class: 'tlvDot' }), c.name)));
+    const rows = [];
+    let day = '', prev = null, lastSide = null; // lastSide: the side of the card just above (null after a day or a pause)
+    for (const e of evs) {
+      const d = dayName(eventStart(e));
+      if (d !== day) { day = d; prev = null; lastSide = null; rows.push(el('div', { class: 'tlvDay' }, el('span', {}, d))); }
+      else if (prev && eventStart(prev) - eventEnd(e) > 3600000) { lastSide = null; rows.push(el('div', { class: 'tlvGap' }, el('span', {}, tr('{d} without events', { d: gapText(eventStart(prev) - eventEnd(e)) })))); }
+      const left = lastSide === null ? true : !lastSide; // every other card on the other side
+      const card = el('div', { class: 'tlvCard' }, item(e, evs, true, { lazy: true }));
+      const side = el('div', { class: 'tlvSide ' + (left ? 'left' : 'right') }, ...(left ? [card, el('span', { class: 'tlvLink' })] : [el('span', { class: 'tlvLink' }), card]));
+      // a card on the other side than the one above moves half a card up (zigzag): twice as many events on the screen
+      const tuck = lastSide !== null && lastSide !== left;
+      lastSide = left;
+      rows.push(el('div', { class: 'tlvRow' + (st.cam ? ' one' : '') + (tuck ? ' tuck' : ''), style: '--c:' + camColour(e.cam) },
+        left ? side : el('div'), el('div', { class: 'tlvTime' }, el('span', {}, fmtTime(eventStart(e), true))), left ? el('div') : side));
+      prev = e;
+    }
+    if (!rows.length) rows.push(el('p', { class: 'empty' }, st.filter === 'Protected' ? tr('No protected events') : tr('No events match the filter')));
+    return el('div', { class: 'tlvWrap' }, S.cams.length > 1 ? legend : null, el('div', { class: 'tlv' }, ...rows), L.more ? moreButton(key) : null);
   }
-  async function loadMore() {
-    const lastOne = allItems[allItems.length - 1];
-    if (!lastOne) return;
-    moreBtn.disabled = true;
-    try {
-      const more = await api('/api/events?limit=100&before=' + eventStart(lastOne));
-      allItems = allItems.concat(more);
-      if (more.length < 100) moreBtn.remove();
-      draw();
-    } catch (e) { /* */ }
-    moreBtn.disabled = false;
+  function draw() {
+    const key = keys()[0];
+    const L = lists[key] || { items: [], more: false };
+    const shown = L.items.filter(matches);
+    if (wide.matches && S.opt.timeAxis) { list.replaceChildren(timelineView(shown, L, key)); return; } // the choice is in General
+    list.replaceChildren(...(shown.length ? withDays(shown, false) : [el('p', { class: 'empty' }, st.filter === 'Protected' ? tr('No protected events') : L.items.length || st.cam || st.day !== null ? tr('No events match the filter') : tr('No events yet'))]),
+      ...(L.more ? [moreButton(key)] : []));
   }
-  drawChips();
-  if (p._items) { draw(); page.scrollTop = p._scroll || 0; }
+  const relayout = () => draw();
+  wide.addEventListener('change', relayout);
+  ctx.cleanup.push(() => wide.removeEventListener('change', relayout));
+  drawChips(); drawCamSel(); drawDayChip();
+  if (p._lists) { draw(); page.scrollTop = p._scroll || 0; } else reload();
+  // new events every 15 s – only while the newest are shown and nothing is being selected
+  let started = false;
   interval(ctx, async () => {
-    await fetchCameras();
-    const newItems = await fetchEvents();
-    if (allItems.length <= 100) {
-      // new events at the top must not push the list down under the finger
-      const before = page.scrollHeight;
-      allItems = newItems.slice();
-      draw();
-      if (page.scrollTop > 0) page.scrollTop += page.scrollHeight - before;
-      return;
-    }
+    if (!started) { started = true; return; } // the first round is the loading above
+    await fetchCameras(); drawCamSel();
+    await fetchEvents(); // the badge in the menu
+    if (st.day !== null || selecting) return;
+    const before = page.scrollHeight;
+    await Promise.all(keys().filter((k) => !lists[k] || lists[k].items.length <= size()).map((k) => load(k, false)));
     draw();
+    if (page.scrollTop > 0) page.scrollTop += page.scrollHeight - before; // new events at the top must not push the list down under the finger
   }, 15000);
-  ctx.cleanup.push(markSeen);
+  ctx.cleanup.push(markSeen, () => root.classList.remove('picking'));
 };
 
 // ---------- video ----------
@@ -585,7 +725,79 @@ function newPlayer(c, ctx) {
   let hls = null;
   const A = { video, box, overlay, msg, clock, buttons, hls: null };
   A.notice = (t) => { msg.textContent = t || ''; msg.hidden = !t; };
-  A.stop = () => { if (hls) { hls.destroy(); hls = null; A.hls = null; } A.frags = null; video.removeAttribute('src'); };
+  A.stop = () => {
+    if (A.mse) { A.mse.abort(); A.mse = null; video.playbackRate = 1; }
+    if (hls) { hls.destroy(); hls = null; A.hls = null; }
+    A.frags = null; video.removeAttribute('src');
+  };
+  // Fast live view (server livemse.go): one long response with fragmented MP4, fed to the browser's MediaSource and kept
+  // about a quarter of a second behind the newest frame. Answers false (and the caller uses HLS) when the browser or the
+  // server cannot; onEnd is called if the stream ends later (e.g. the camera reconnects).
+  A.playMSE = (url, onEnd) => new Promise((ok) => {
+    A.stop();
+    const MS = window.ManagedMediaSource || window.MediaSource;
+    if (!MS || !window.ReadableStream || load('liveHLS', false)) { ok(false); return; }
+    const ac = new AbortController();
+    A.mse = ac;
+    let started = false, failed = false;
+    const fail = () => { if (failed) return; failed = true; if (A.mse === ac) { ac.abort(); A.mse = null; } if (!started) ok(false); };
+    const startTimer = setTimeout(() => { if (!started) fail(); }, 8000);
+    A.notice(tr('Loading video …'));
+    (async () => {
+      const r = await fetch(S.server + url, { headers: { Authorization: 'Bearer ' + S.token }, signal: ac.signal, cache: 'no-store' });
+      const codec = r.headers.get('X-Codec');
+      const type = 'video/mp4; codecs="' + codec + '"';
+      if (!r.ok || !codec || !r.body || !MS.isTypeSupported(type)) { fail(); return; }
+      const ms = new MS();
+      if (window.ManagedMediaSource) video.disableRemotePlayback = true;
+      video.src = URL.createObjectURL(ms);
+      await new Promise((res) => ms.addEventListener('sourceopen', res, { once: true }));
+      const sb = ms.addSourceBuffer(type);
+      sb.mode = 'segments';
+      const queue = [];
+      const pump = () => {
+        if (sb.updating || failed) return;
+        const b = video.buffered;
+        // trim what has been played (keep 10 s), so the buffer never fills up
+        if (b.length && video.currentTime - b.start(0) > 30) { try { sb.remove(b.start(0), video.currentTime - 10); } catch (e) { /* next time */ } return; }
+        if (!queue.length) return;
+        let data = queue.shift();
+        if (queue.length) { // append everything that is waiting in one go
+          const all = new Uint8Array(data.length + queue.reduce((n, q) => n + q.length, 0));
+          all.set(data, 0); let o = data.length;
+          for (const q of queue.splice(0)) { all.set(q, o); o += q.length; }
+          data = all;
+        }
+        try { sb.appendBuffer(data); } catch (e) { fail(); }
+      };
+      sb.addEventListener('updateend', () => {
+        const b = video.buffered;
+        if (b.length) {
+          const end = b.end(b.length - 1), lag = end - video.currentTime;
+          if (!started) {
+            started = true; clearTimeout(startTimer);
+            video.currentTime = Math.max(b.start(b.length - 1), end - 0.2);
+            video.play().catch(() => {});
+            A.notice(''); ok(true);
+          } else if (lag > 1.5 || video.currentTime < b.start(b.length - 1)) {
+            video.currentTime = end - 0.2; // far behind (the tab was hidden, slow network): jump to now
+          } else {
+            video.playbackRate = lag > 0.5 ? 1.15 : 1; // a little behind: catch up quietly
+          }
+        }
+        pump();
+      });
+      video.addEventListener('error', fail, { once: true });
+      const reader = r.body.getReader();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done || failed) break;
+        queue.push(value);
+        pump();
+      }
+      if (A.mse === ac && !failed) { A.mse = null; if (started && onEnd) onEnd(); else fail(); }
+    })().catch(() => { if (A.mse === ac || !started) fail(); });
+  });
   // play(url, live, at): at = wall-clock time (ms) to start at (recordings only)
   A.play = (url, live, at) => new Promise((ok) => {
     A.stop();
@@ -650,13 +862,52 @@ function newPlayer(c, ctx) {
     for (const b of boxList) frameEl.append(boxEl(b, w, h, true));
     overlay.append(frameEl);
   };
-  buttons.append(iconButton('full', tr('Full screen'), () => setFullscreen(!document.body.classList.contains('full')), 'small-btn'));
+  // Save image: the picture the video shows right now, in its full size (HD when HD is shown), turned like on screen
+  A.saveImage = async () => {
+    if (!video.videoWidth) return;
+    const cv = document.createElement('canvas');
+    const turn = c.rotate === 180;
+    cv.width = video.videoWidth; cv.height = video.videoHeight;
+    const g = cv.getContext('2d');
+    if (turn) { g.translate(cv.width, cv.height); g.rotate(Math.PI); }
+    g.drawImage(video, 0, 0);
+    const t = new Date(A.at() || Date.now());
+    const name = 'ArgusSen_' + (c.name || c.id).replace(/\s+/g, '_') + '_' + t.getFullYear() + '-' + to(t.getMonth() + 1) + '-' + to(t.getDate()) + '_' + to(t.getHours()) + '-' + to(t.getMinutes()) + '-' + to(t.getSeconds()) + '.jpg';
+    const say = (txt) => { A.notice(txt); setTimeout(() => A.notice(''), 2500); };
+    if (NATIVE) {
+      if (!NATIVE.saveImage) { say(tr('Update the app to save images')); return; }
+      say(NATIVE.saveImage(cv.toDataURL('image/jpeg', 0.92).split(',')[1], name) ? tr('Image saved') : tr('Could not save the image'));
+      return;
+    }
+    cv.toBlob((b) => {
+      if (!b) return;
+      const a = el('a', { href: URL.createObjectURL(b), download: name }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      say(tr('Image saved'));
+    }, 'image/jpeg', 0.92);
+  };
+  buttons.append(iconButton('full', tr('Full screen'), () => setFullscreen(!document.body.classList.contains('full')), 'small-btn'),
+    Object.assign(iconButton('photo', tr('Save image'), () => A.saveImage(), 'small-btn'), { title: tr('Save image') }));
   A.buttons = buttons;
   ctx.cleanup.push(() => { A.stop(); setFullscreen(false); });
   return A;
 }
 
-// Pinch to zoom, drag with one finger when zoomed in, double tap = zoom in/out.
+// wheelStepper: whole steps from the mouse wheel – one per notch of a mouse; a touchpad's small movements add up.
+function wheelStepper() {
+  let acc = 0;
+  return (e) => {
+    let d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (e.deltaMode === 1) d *= 33; else if (e.deltaMode === 2) d *= 400;
+    if (Math.abs(d) >= 50) { acc = 0; return Math.sign(d); } // a mouse: one step per notch
+    acc += d;
+    const n = Math.trunc(acc / 100);
+    acc -= n * 100;
+    return n;
+  };
+}
+
+// Pinch to zoom, drag with one finger when zoomed in, double tap = zoom in/out; a PC: the mouse wheel zooms around the pointer.
 function zoomable(box, inner) {
   let s = 1, x = 0, y = 0, lastTap = 0, moved = false;
   const pts = new Map();
@@ -709,29 +960,30 @@ function zoomable(box, inner) {
   };
   box.addEventListener('pointerup', endT);
   box.addEventListener('pointercancel', endT);
+  box.addEventListener('wheel', (e) => {
+    if (e.target.closest('button')) return;
+    let d = e.deltaY;
+    if (e.deltaMode === 1) d *= 33; else if (e.deltaMode === 2) d *= 400;
+    if (s === 1 && d >= 0) return; // not zoomed in: scrolling down still scrolls the page
+    e.preventDefault();
+    const r = rel(e);
+    zoomTo(s * Math.pow(1.0015, -Math.max(-200, Math.min(200, d))), r.x, r.y);
+  }, { passive: false });
   new ResizeObserver(() => draw()).observe(box);
 }
 
 // Live + timeline for one camera
-// speedControl: "− 1× +" over the video, the same on the timeline and when playing an event. ½× … 16× is the video's
-// own speed; 64× plays at 16× and jumps ahead once a second (browsers play at most 16×) – best in SD.
-const SPEED_STEPS = [0.5, 1, 2, 4, 8, 16, 64];
+// speedControl: "− 1× +" over the video, the same on the timeline and when playing an event: ½× … 16× (the most browsers play).
+const SPEED_STEPS = [0.5, 1, 2, 4, 8, 16];
 function speedControl(A, st, ctx) {
   const label = el('span', { class: 'speedVal', 'aria-live': 'polite' });
-  let jump = null, live = false;
+  let live = false;
   const minus = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Slower') }, '−');
   const plus = el('button', { type: 'button', class: 'small-btn', 'aria-label': tr('Faster') }, '+');
-  let jumpFor = 0; // the speed the jump timer runs for (it is only restarted when the speed changes)
   const apply = () => {
     const v = live ? 1 : st.speed;
     label.textContent = (v === 0.5 ? '½' : v) + '×';
-    const rate = Math.min(v, 16);
-    if (A.video.playbackRate !== rate) { A.video.defaultPlaybackRate = rate; A.video.playbackRate = rate; }
-    const want = v > 16 ? v : 0;
-    if (want !== jumpFor) {
-      clearInterval(jump); jump = null; jumpFor = want;
-      if (want) jump = setInterval(() => { if (!A.video.paused) A.video.currentTime += want - 16; }, 1000);
-    }
+    if (A.video.playbackRate !== v) { A.video.defaultPlaybackRate = v; A.video.playbackRate = v; }
     minus.disabled = v === SPEED_STEPS[0]; plus.disabled = v === SPEED_STEPS[SPEED_STEPS.length - 1];
   };
   const step = (d) => {
@@ -742,7 +994,6 @@ function speedControl(A, st, ctx) {
   minus.onclick = () => step(-1);
   plus.onclick = () => step(1);
   A.video.addEventListener('loadedmetadata', apply);
-  ctx.cleanup.push(() => clearInterval(jump));
   const box = el('div', { class: 'speedCtl' }, minus, label, plus);
   if (!SPEED_STEPS.includes(st.speed)) st.speed = 1;
   apply();
@@ -754,9 +1005,13 @@ SCREENS.camera = (root, p, ctx) => {
   const c = camById(p.cam);
   S.lastCam = c.id; save('lastCam', c.id);
   const st = { hd: p.hd !== undefined ? !!p.hd : true, at: p.at || null, day: p.day || dayStart(p.at || Date.now()), tl: null };
-  const camChips = S.cams.length > 1 ? el('div', { class: 'chips camPicker' }, ...S.cams.map((k) =>
-    el('button', { type: 'button', class: 'chip' + (k.id === c.id ? ' selected' : ''), 'aria-pressed': k.id === c.id ? 'true' : 'false',
-      onclick: () => { if (k.id !== c.id) go('camera', { cam: k.id, at: st.at === null ? null : (A.at() || st.at), hd: st.hd, day: st.day, speed: st.speed }, true); } }, k.name))) : null;
+  let scrub = null; // the time chosen with the mouse wheel on the timeline (played when the wheel stops)
+  // the camera as a menu where the heading was (more compact than a button per camera); the same time, day and SD/HD
+  const camPick = el('select', { class: 'chipSelect', 'aria-label': tr('Camera'), onchange: () => {
+    if (camPick.value !== c.id) go('camera', { cam: camPick.value, at: st.at === null ? null : (A.at() || st.at), hd: st.hd, day: st.day, speed: st.speed }, true);
+  } }, ...S.cams.map((k) => el('option', { value: k.id }, k.name)));
+  camPick.value = c.id;
+  camPick.hidden = S.cams.length < 2;
   const badge = el('span');
   const A = newPlayer(c, ctx);
   const sd = el('button', { type: 'button', class: 'small-btn' }, 'SD');
@@ -774,13 +1029,100 @@ SCREENS.camera = (root, p, ctx) => {
     show(!!load('showZones', false));
     A.buttons.append(zonesBtn);
   }
+  // PTZ (cameras that can turn, found through ONVIF): a pad over the live video and the saved positions above the
+  // timeline. A held button sends "move" every 400 ms; the server stops the camera by itself when that stops.
+  const ptzSection = el('section', { class: 'tl ptzPositions', hidden: true });
+  // a PC: the saved positions are buttons in the row with the camera menu and the days (the grid has no room for a section)
+  const ptzInline = el('div', { class: 'chips ptzInline', hidden: true });
+  const ptzLayer = el('div', { class: 'ptzLayer', hidden: true });
+  A.box.append(ptzLayer);
+  (async () => {
+    let info;
+    try { info = await api('/api/cams/' + c.id + '/ptz'); } catch (e) { return; }
+    if (!info || !info.ptz || !root.isConnected) return;
+    const flip = c.rotate === 180;
+    let timer = null, cur = null;
+    const send = (body) => api('/api/cams/' + c.id + '/ptz', { method: 'POST', body }).catch((e) => { A.notice(e.message); setTimeout(() => A.notice(''), 3000); });
+    const stopMove = () => { if (!timer) return; clearInterval(timer); timer = null; send({ op: 'stop' }); };
+    const startMove = (x, y, z) => {
+      if (st.at !== null) { A.notice(tr('The camera can only be turned in the live view')); setTimeout(() => A.notice(''), 2500); return; }
+      if (flip) { x = -x; y = -y; }
+      cur = { op: 'move', x, y, z };
+      send(cur);
+      clearInterval(timer); timer = setInterval(() => send(cur), 400);
+    };
+    ctx.cleanup.push(stopMove);
+    const arrow = (deg) => '<svg viewBox="0 0 24 24" style="transform:rotate(' + deg + 'deg)"><path d="M12 19V6M6.5 11.5L12 6l5.5 5.5"/></svg>';
+    const padBtn = (x, y, z, label, html) => {
+      const b = el('button', { type: 'button', class: 'ptzBtn', 'aria-label': label, html });
+      b.addEventListener('pointerdown', (ev) => { ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId); startMove(x, y, z); });
+      for (const k of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(k, (ev) => { ev.stopPropagation(); stopMove(); });
+      b.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && !timer) { ev.preventDefault(); startMove(x, y, z); } });
+      b.addEventListener('keyup', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') stopMove(); });
+      b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+      return b;
+    };
+    const v = 0.5; // speed
+    const U = tr('Up'), D = tr('Down'), L = tr('Left'), R = tr('Right');
+    // four directions: many cameras (e.g. Reolink E1) ignore turning and tilting at the same time
+    const pad = el('div', { class: 'ptzPad' },
+      el('span'), padBtn(0, v, 0, U, arrow(0)), el('span'),
+      padBtn(-v, 0, 0, L, arrow(-90)), el('span'), padBtn(v, 0, 0, R, arrow(90)),
+      el('span'), padBtn(0, -v, 0, D, arrow(180)), el('span'));
+    ptzLayer.append(pad);
+    if (info.zoom) ptzLayer.append(el('div', { class: 'ptzZoom' },
+      padBtn(0, 0, v, tr('Zoom in'), '<svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>'),
+      padBtn(0, 0, -v, tr('Zoom out'), '<svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>')));
+    let lastPresets = [];
+    const drawPresets = (presets) => {
+      lastPresets = presets;
+      const admin = S.user && S.user.admin;
+      const chips = presets.map((pr) => {
+        const goBtn = el('button', { type: 'button', class: 'chip', onclick: () => { if (st.at !== null) { st.at = null; play(); } send({ op: 'goto', preset: pr.token }); } }, pr.name);
+        if (!admin) return goBtn;
+        return el('span', { class: 'chipGroup' }, goBtn, el('button', { type: 'button', class: 'chip chipX', 'aria-label': tr('Delete {name}?', { name: pr.name }), onclick: async () => {
+          if (!confirm(tr('Delete {name}?', { name: pr.name }))) return;
+          try { const r = await api('/api/cams/' + c.id + '/ptz', { method: 'POST', body: { op: 'remove', preset: pr.token } }); drawPresets(r.presets || []); } catch (e) { alert(e.message); }
+        } }, '×'));
+      });
+      const savePos = async () => {
+        const name = (prompt(tr('Name of the position, e.g. Door')) || '').trim();
+        if (!name) return;
+        try { const r = await api('/api/cams/' + c.id + '/ptz', { method: 'POST', body: { op: 'save', name } }); drawPresets(r.presets || []); } catch (e) { alert(e.message); }
+      };
+      if (wide.matches) {
+        ptzSection.replaceChildren();
+        ptzInline.replaceChildren(...chips, admin ? el('button', { type: 'button', class: 'chip', title: tr('Save position'), onclick: savePos }, '+ ' + tr('Save position')) : null);
+        if (!chips.length && !admin) ptzInline.append(el('span', { class: 'hint' }, tr('No saved positions yet – turn the camera and save the position.')));
+        return;
+      }
+      ptzInline.replaceChildren();
+      ptzSection.replaceChildren(el('div', { class: 'heading' }, el('h2', {}, tr('Positions'))),
+        chips.length ? el('div', { class: 'chips' }, ...chips) : el('p', { class: 'hint' }, tr('No saved positions yet – turn the camera and save the position.')),
+        admin ? el('div', { class: 'tl-buttons' }, el('button', { type: 'button', class: 'btn grey', onclick: savePos }, '+ ' + tr('Save position'))) : null);
+    };
+    const redrawPresets = () => drawPresets(lastPresets);
+    wide.addEventListener('change', redrawPresets);
+    ctx.cleanup.push(() => wide.removeEventListener('change', redrawPresets));
+    drawPresets(info.presets || []);
+    const ptzBtn = el('button', { type: 'button', class: 'small-btn', 'aria-pressed': 'false', title: tr('Turn the camera') }, 'PTZ');
+    let ptzOn = false;
+    const placePositions = () => { ptzSection.hidden = !ptzOn || wide.matches; ptzInline.hidden = !ptzOn || !wide.matches; };
+    wide.addEventListener('change', placePositions);
+    ctx.cleanup.push(() => wide.removeEventListener('change', placePositions));
+    const showPTZ = (on) => { ptzOn = on; ptzLayer.hidden = !on; placePositions(); ptzBtn.classList.toggle('selected', on); ptzBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); save('showPTZ', on); if (!on) stopMove(); };
+    ptzBtn.onclick = () => showPTZ(ptzLayer.hidden);
+    A.buttons.append(ptzBtn);
+    showPTZ(load('showPTZ', true) !== false);
+  })();
   const days = el('div', { class: 'chips' });
   const dateInput = el('input', { type: 'date', class: 'datePicker', 'aria-label': tr('Pick day') });
   const bar = el('div', { class: 'tl-bar', role: 'slider', 'aria-label': tr('Timeline – tap to seek'), tabindex: '0' });
   const head = el('div', { class: 'head' });
   const axisEl = el('div', { class: 'tl-axis' }, ...['00', '06', '12', '18', '24'].map((x) => el('span', {}, x)));
   const eventList = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
-  const toLive = el('button', { type: 'button', class: 'btn red', onclick: () => { st.at = null; play(); } }, tr('Go to live'));
+  // in the heading next to the days (not a row of its own): the timeline and the video stay where they are when it appears
+  const toLive = el('button', { type: 'button', class: 'chip goLive', onclick: () => { st.at = null; play(); } }, tr('Go to live'));
   // a PC: the video fits its area, the timeline stays above the menu and the day's events are a column on the right
   // (CSS #screen.camScreen); a phone keeps the video at the top and scrolls the rest
   const camFit = el('div', { class: 'camFit' }, A.box);
@@ -795,19 +1137,22 @@ SCREENS.camera = (root, p, ctx) => {
   };
   const ro = new ResizeObserver(fitVideo);
   ro.observe(camFit);
+  const redrawList = () => drawTimeline();
   wide.addEventListener('change', fitVideo);
+  wide.addEventListener('change', redrawList);
   root.classList.add('camScreen');
-  ctx.cleanup.push(() => { ro.disconnect(); wide.removeEventListener('change', fitVideo); root.classList.remove('camScreen'); });
+  ctx.cleanup.push(() => { ro.disconnect(); wide.removeEventListener('change', fitVideo); wide.removeEventListener('change', redrawList); root.classList.remove('camScreen'); });
   root.append(topBar(c.name, { back: true, right: [badge] }), camFit,
-    el('div', { class: 'page under-player' },
-      el('section', { class: 'tl' }, camChips,
-        el('div', { class: 'heading' }, el('h2', {}, tr('Timeline')), days), axisEl, bar,
-        el('div', { class: 'tl-buttons' }, toLive), el('p', { class: 'hint' }, tr('Coloured = recorded · orange = event · tap the line to seek')), dateInput),
+    el('div', { class: 'page under-player' }, ptzSection,
+      el('section', { class: 'tl' },
+        el('div', { class: 'heading tlRow' }, camPick, ptzInline, el('div', { class: 'chips tlChoices' }, days, toLive)), axisEl, bar,
+        el('p', { class: 'hint' }, MOUSE ? tr('Coloured = recorded · orange = event · click the line to seek') : tr('Coloured = recorded · orange = event · tap the line to seek')), dateInput),
       el('div', { class: 'content' }, el('h2', { class: 'small' }, tr('Events this day')), eventList)));
 
   function drawBadge() {
-    badge.replaceChildren(st.at === null ? el('span', { class: 'liveBadge' }, 'LIVE')
-      : el('span', { class: 'timeBadge' }, (dayStart(st.at) === dayStart(Date.now()) ? '' : new Date(st.at).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) + ' ') + fmtTime(A.at() || st.at, true)));
+    const at = scrub !== null ? scrub : st.at;
+    badge.replaceChildren(at === null ? el('span', { class: 'liveBadge' }, 'LIVE')
+      : el('span', { class: 'timeBadge' }, (dayStart(at) === dayStart(Date.now()) ? '' : new Date(at).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) + ' ') + fmtTime(scrub !== null ? scrub : (A.at() || st.at), true)));
     sd.classList.toggle('selected', !st.hd); hd.classList.toggle('selected', st.hd);
     toLive.hidden = st.at === null;
     speedCtl.setLive(st.at === null);
@@ -815,7 +1160,10 @@ SCREENS.camera = (root, p, ctx) => {
   async function play() {
     A.overlay.replaceChildren();
     if (st.at === null) {
-      await A.play('/api/live/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '/index.m3u8', true);
+      const base = '/api/live/' + c.id + '/' + (st.hd ? 'main' : 'sub');
+      // the fast live view first (about half a second behind); HLS if the browser or the server cannot
+      const fast = await A.playMSE(base + '/stream.mp4', () => { if (st.at === null) setTimeout(play, 1000); });
+      if (!fast) await A.play(base + '/index.m3u8', true);
     } else {
       const from = Math.round(st.at - 60000), until = Math.round(st.at + 3 * 3600000);
       let ok = await A.play('/api/play/' + c.id + '/' + (st.hd ? 'main' : 'sub') + '?from=' + from + '&to=' + until, false, st.at);
@@ -854,12 +1202,13 @@ SCREENS.camera = (root, p, ctx) => {
     items.push(head);
     bar.replaceChildren(...items);
     const evs = tl.events.slice().reverse ? tl.events.slice() : [];
-    eventList.replaceChildren(...(evs.length ? evs.map((e) => el('button', { type: 'button', class: 'list-row', onclick: () => go('playback', { id: e.id, list: evs.map((x) => x.id), ev: e }) },
+    // a PC: rows with a picture in the column on the right; a phone: the short list under the timeline (less data)
+    eventList.replaceChildren(...(wide.matches ? dayEventRows(evs) : evs.length ? evs.map((e) => el('button', { type: 'button', class: 'list-row', onclick: () => go('playback', { id: e.id, list: evs.map((x) => x.id), ev: e }) },
       el('span', {}, fmtTime(eventStart(e), true)), el('span', { class: 'l' }, eventLabel(e)))) : [el('p', { class: 'hint' }, tr('No events'))]));
     moveHead();
   }
   function moveHead() {
-    const t = st.at === null ? Date.now() : (A.at() || st.at);
+    const t = scrub !== null ? scrub : st.at === null ? Date.now() : (A.at() || st.at);
     head.style.left = pct(t) + '%';
     head.hidden = t < st.day || t > st.day + DAY_MS;
   }
@@ -869,6 +1218,22 @@ SCREENS.camera = (root, p, ctx) => {
     if (t > Date.now() - 30000) { st.at = null; } else st.at = t;
     play();
   });
+  // the mouse wheel on the line: 1 minute per step (up = later, down = earlier); the video is loaded once the wheel stops
+  const wheelStep = wheelStepper();
+  let scrubTimer = null;
+  bar.title = tr('Mouse: scroll on the video to zoom · scroll on the line to jump 1 minute');
+  A.box.title = bar.title; // the same help over the video (a PC shows it when the mouse rests there)
+  bar.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const n = -wheelStep(ev);
+    if (!n) return;
+    const base = scrub !== null ? scrub : st.at === null ? Date.now() : (A.at() || st.at);
+    scrub = Math.max(st.day, Math.min(base + n * 60000, st.day + DAY_MS - 1, Date.now()));
+    moveHead(); drawBadge();
+    clearTimeout(scrubTimer);
+    scrubTimer = setTimeout(() => { const t = scrub; scrub = null; st.at = t > Date.now() - 30000 ? null : t; play(); }, 400);
+  }, { passive: false });
+  ctx.cleanup.push(() => clearTimeout(scrubTimer));
 
   // live boxes from the server
   interval(ctx, async () => {
@@ -927,27 +1292,92 @@ SCREENS.playback = async (root, p, ctx) => {
   };
   const ro = new ResizeObserver(resize);
   ro.observe(fit);
-  ctx.cleanup.push(() => ro.disconnect());
-  root.append(topBar(c.name, { back: true, under: dayName(start) + ' ' + fmtTime(start, true) + ' · ' + duration(endT - start) }), fit,
-    el('div', { class: 'controls under-player' },
-      el('button', { type: 'button', 'aria-label': tr('Back 10 seconds'), html: ICON.back10, onclick: () => { A.video.currentTime = Math.max(0, A.video.currentTime - 10); } }),
-      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Newer event'), html: ICON.previous, disabled: idx <= 0, style: idx <= 0 ? 'opacity:.35' : '', onclick: () => neighbours(-1) }),
-      playBtn,
-      el('button', { type: 'button', class: 'filled', 'aria-label': tr('Older event'), html: ICON.next, disabled: idx < 0 || idx >= list.length - 1, style: idx < 0 || idx >= list.length - 1 ? 'opacity:.35' : '', onclick: () => neighbours(1) })),
-    el('div', { class: 'tl under-player fixed', style: 'background:none' },
-      el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
-      el('p', { class: 'hint' }, tr('Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }))),
-    el('div', { class: 'under-player details' },
-      el('div', { class: 'content' },
-        el('h2', { class: 'small' }, tr('Detected')),
-        el('div', { class: 'eventLabels' }, ...(e.labels && e.labels.length ? e.labels.map((l) => el('span', { class: 'eventLabel' }, labelName(l))) : [el('span', { class: 'eventLabel' }, tr('Motion'))]),
-          e.score ? el('span', { class: 'eventLabel' }, tr('{p} % certain', { p: Math.round(e.score * 100) })) : null),
-        eventActions(e),
-        el('div', { class: 'to' },
-          el('button', { type: 'button', class: 'btn grey', html: ICON.camera + tr('Watch live'), onclick: () => go('camera', { cam: c.id }) }),
-          el('button', { type: 'button', class: 'btn grey', html: ICON.clock + tr('Open timeline'), onclick: () => go('camera', { cam: c.id, at: start }) })))));
+  // a PC: the camera's events that day in a column on the right (as on the timeline), this one marked – fetched only there
+  const wideP = window.matchMedia('(min-width: 800px)');
+  const sideList = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  const side = el('div', { class: 'content evSide under-player' }, el('h2', { class: 'small' }, tr('Events this day')), sideList);
+  let sideDone = false;
+  const fillSide = async () => {
+    if (!wideP.matches || sideDone) return;
+    sideDone = true;
+    const day = dayStart(start);
+    let evs = [];
+    try { evs = (await api('/api/timeline/' + c.id + '?from=' + day + '&to=' + Math.min(day + DAY_MS, Date.now() + 60000))).events || []; } catch (err) { sideDone = false; return; }
+    sideList.replaceChildren(...dayEventRows(evs, e.id));
+    const cur = sideList.querySelector('.current');
+    if (cur) cur.scrollIntoView({ block: 'center' });
+  };
+  wideP.addEventListener('change', fillSide);
+  // the time being played, as on the timeline (top right)
+  const badge = el('span');
+  const drawBadge = () => {
+    const t = A.at() || start;
+    badge.replaceChildren(el('span', { class: 'timeBadge' }, (dayStart(t) === dayStart(Date.now()) ? '' : new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) + ' ') + fmtTime(t, true)));
+  };
+  drawBadge();
+  const pc = wideP.matches;
+  // switching between a PC and a phone layout (a window made narrow): draw the screen again
+  const relayout = () => { if (wideP.matches !== pc) go('playback', p, true); };
+  wideP.addEventListener('change', relayout);
+  root.classList.add(pc ? 'playPC' : 'playScreen');
+  ctx.cleanup.push(() => { ro.disconnect(); wideP.removeEventListener('change', fillSide); wideP.removeEventListener('change', relayout); root.classList.remove('playScreen', 'playPC'); });
+  if (pc) {
+    // A PC: built like the timeline, so it feels like the same player – the video keeps its size and place, and
+    // under it the same rows: buttons, a heading with choices, the bar (here the event instead of the whole day), a hint.
+    const status = el('span', { role: 'status', class: 'pbStatus' });
+    const say = (t) => { status.textContent = t ? ' · ' + t : ''; };
+    const chipBtn = (icon, label, onclick, extra) => el('button', Object.assign({ type: 'button', class: 'chip iconChip', html: icon, 'aria-label': label, title: label, onclick }, extra || {}));
+    playBtn.className = 'chip iconChip filled selected';
+    const protect = chipBtn(ICON.flag, tr('Protect'), async () => {
+      try { await protectEvent(e); drawProtect(); say(e.keep ? tr('The event and the recording around it will not be deleted.') : tr('Protection removed – deleted after 30 days as usual.')); } catch (err) { say(err.message); }
+    });
+    const drawProtect = () => { protect.classList.toggle('selected', !!e.keep); protect.setAttribute('aria-pressed', e.keep ? 'true' : 'false');
+      protect.title = tr(e.keep ? 'Protected' : 'Protect'); protect.disabled = !!e.keep && !canUnprotect(); };
+    drawProtect();
+    const actions = [protect, chipBtn(ICON.download, tr('Download video'), () => downloadEvent(e, say))];
+    if (S.user && S.user.admin) actions.push(chipBtn(ICON.trash, tr('Delete'), async () => { try { if (await deleteEvent(e)) back(); } catch (err) { say(err.message); } }));
+    bar.style.height = '';
+    root.append(topBar(c.name, { back: true, right: [badge] }), fit,
+      el('section', { class: 'tl under-player pbPanel' },
+        // one row, like the camera menu and the days on the timeline: play buttons and what was found | protect,
+        // download, delete, live, timeline (the date and length are in the badge at the top and the marked event on the right)
+        el('div', { class: 'heading tlRow' },
+          el('div', { class: 'chips pbRow' },
+            chipBtn(ICON.back10, tr('Back 10 seconds'), () => { A.video.currentTime = Math.max(0, A.video.currentTime - 10); }),
+            chipBtn(ICON.previous, tr('Newer event'), () => neighbours(-1), { class: 'chip iconChip filled', disabled: idx <= 0 }),
+            playBtn,
+            chipBtn(ICON.next, tr('Older event'), () => neighbours(1), { class: 'chip iconChip filled', disabled: idx < 0 || idx >= list.length - 1 }),
+            el('span', { class: 'eventLabels pbLabels', 'aria-label': tr('Detected') }, ...(e.labels && e.labels.length ? e.labels.map((l) => el('span', { class: 'eventLabel' }, labelName(l))) : [el('span', { class: 'eventLabel' }, tr('Motion'))]),
+              e.score ? el('span', { class: 'eventLabel' }, tr('{p} % certain', { p: Math.round(e.score * 100) })) : null)),
+          el('div', { class: 'chips tlChoices' }, ...actions,
+            el('button', { type: 'button', class: 'chip', onclick: () => go('camera', { cam: c.id }) }, tr('Live')),
+            el('button', { type: 'button', class: 'chip', onclick: () => go('camera', { cam: c.id, at: start }) }, tr('Timeline')))),
+        el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
+        el('p', { class: 'hint' }, tr(MOUSE ? 'Orange = the event · {f} s before and {e} s after are included · click to seek' : 'Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }), status)), side);
+    fillSide();
+  } else {
+    root.append(topBar(c.name, { back: true, under: dayName(start) + ' ' + fmtTime(start, true) + ' · ' + duration(endT - start) }), fit,
+      el('div', { class: 'controls under-player' },
+        el('button', { type: 'button', 'aria-label': tr('Back 10 seconds'), html: ICON.back10, onclick: () => { A.video.currentTime = Math.max(0, A.video.currentTime - 10); } }),
+        el('button', { type: 'button', class: 'filled', 'aria-label': tr('Newer event'), html: ICON.previous, disabled: idx <= 0, style: idx <= 0 ? 'opacity:.35' : '', onclick: () => neighbours(-1) }),
+        playBtn,
+        el('button', { type: 'button', class: 'filled', 'aria-label': tr('Older event'), html: ICON.next, disabled: idx < 0 || idx >= list.length - 1, style: idx < 0 || idx >= list.length - 1 ? 'opacity:.35' : '', onclick: () => neighbours(1) })),
+      el('div', { class: 'tl under-player fixed', style: 'background:none' },
+        el('div', { class: 'tl-axis' }, el('span', {}, fmtTime(from, true)), el('span', {}, fmtTime(until, true))), bar,
+        el('p', { class: 'hint' }, tr(MOUSE ? 'Orange = the event · {f} s before and {e} s after are included · click to seek' : 'Orange = the event · {f} s before and {e} s after are included · tap to seek', { f: preS, e: postS }))),
+      el('div', { class: 'under-player details' },
+        el('div', { class: 'content' },
+          el('h2', { class: 'small' }, tr('Detected')),
+          el('div', { class: 'eventLabels' }, ...(e.labels && e.labels.length ? e.labels.map((l) => el('span', { class: 'eventLabel' }, labelName(l))) : [el('span', { class: 'eventLabel' }, tr('Motion'))]),
+            e.score ? el('span', { class: 'eventLabel' }, tr('{p} % certain', { p: Math.round(e.score * 100) })) : null),
+          eventActions(e),
+          el('div', { class: 'to' },
+            el('button', { type: 'button', class: 'btn grey', html: ICON.camera + tr('Watch live'), onclick: () => go('camera', { cam: c.id }) }),
+            el('button', { type: 'button', class: 'btn grey', html: ICON.clock + tr('Open timeline'), onclick: () => go('camera', { cam: c.id, at: start }) })))), side);
+    fillSide();
+  }
 
-  playBtn.onclick = () => { if (A.video.paused) A.video.play(); else A.video.pause(); };
+  playBtn.onclick = () => { if (A.video.paused) A.video.play().catch(() => {}); else A.video.pause(); };
   A.video.addEventListener('play', () => { playBtn.innerHTML = ICON.pause; playBtn.setAttribute('aria-label', tr('Pause')); });
   A.video.addEventListener('pause', () => { playBtn.innerHTML = ICON.play; playBtn.setAttribute('aria-label', tr('Play')); });
   const speedCtl = speedControl(A, st, ctx);
@@ -958,10 +1388,22 @@ SCREENS.playback = async (root, p, ctx) => {
     const nowT = A.at();
     if (nowT) A.video.currentTime = Math.max(0, A.video.currentTime + (t - nowT) / 1000);
   });
+  // the mouse wheel on the bar: 10 seconds per step (up = later, down = earlier)
+  const wheelStep = wheelStepper();
+  bar.title = tr('Mouse: scroll on the video to zoom · scroll on the line to jump 10 seconds');
+  A.box.title = bar.title; // the same help over the video (a PC shows it when the mouse rests there)
+  bar.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const n = -wheelStep(ev), t = A.at();
+    if (!n || !t) return;
+    const want = Math.max(from, Math.min(until, t + n * 10000));
+    A.video.currentTime = Math.max(0, A.video.currentTime + (want - t) / 1000);
+  }, { passive: false });
   A.video.addEventListener('timeupdate', () => {
     const t = A.at();
     if (!t) return;
     A.clock.textContent = fmtTime(t, true);
+    drawBadge();
     head.style.left = Math.max(0, Math.min(100, (t - from) / (until - from) * 100)) + '%';
     if (t > until + 1000 && !A.video.paused) A.video.pause();
   });
@@ -1062,7 +1504,7 @@ SCREENS.status = (root, p, ctx) => {
     el('div', { class: 'r', style: `background:conic-gradient(${colour} 0 ${v}%, #454545 ${v}% 100%)` }, el('span', {}, Math.round(v) + ' %')), label);
   interval(ctx, async () => {
     let d = null;
-    try { d = admin ? await api('/api/status') : null; } catch (e) { /* */ }
+    try { d = await api('/api/status'); } catch (e) { /* an older ArgusSen: only administrators – the camera list below */ }
     const cams = await fetchCameras();
     const sys = d && d.system;
     const ver = NATIVE ? NATIVE.versionName() : 'web';
@@ -1085,7 +1527,8 @@ SCREENS.status = (root, p, ctx) => {
         mem: sys.app.mem_mb >= 1000 ? (sys.app.mem_mb / 1000).toFixed(2).replace('.', ',') + ' GB' : sys.app.mem_mb + ' MB',
         limit: (sys.app.mem_limit_mb / 1000).toFixed(2).replace('.', ',') + ' GB' })));
     }
-    try {
+    // the home mode tells whether the family is home: administrators only (the server refuses the others)
+    if (admin) try {
       const m = await api('/api/mode');
       const names = m.events_off.map(camName).join(', ');
       items.push(el('div', { class: 'camRow' }, el('span', { class: 'dot', style: 'background:' + (m.home ? '#F59A3C' : '#5CC8BB') }),
@@ -1111,7 +1554,7 @@ SCREENS.status = (root, p, ctx) => {
   }, 5000);
 };
 SCREENS.log = (root, p, ctx) => {
-  const KIND_COLOURS = { error: '#D9483B', ok: '#3DBE6B', alarm: '#F59A3C', user: '#C8C8C8', info: '#5CC8BB' };
+  const KIND_COLOURS = { error: '#D63A2C', ok: '#3DBE6B', alarm: '#F59A3C', user: '#C8C8C8', info: '#5CC8BB' };
   const filter = el('input', { type: 'search', placeholder: tr('Filter (camera, text, error …)'), 'aria-label': tr('Filter') });
   const list = el('div');
   const moreBtn = el('button', { type: 'button', class: 'moreBtn', hidden: true }, tr('Load older'));
@@ -1317,6 +1760,17 @@ SCREENS.set_storage = (root) => {
   shown();
 };
 
+// cardify: a heading and what follows it become one card (section.setCard). A PC shows the cards in a grid of columns
+// (the switches sit next to their text instead of 1500 px away); on a phone the cards are invisible (display: contents).
+function cardify(content) {
+  let card = null;
+  for (const n of [...content.children]) {
+    if (n.tagName === 'H2') { card = el('section', { class: 'setCard' }); content.insertBefore(card, n); }
+    if (card) card.append(n);
+  }
+  content.classList.add('setGrid');
+}
+
 SCREENS.set_general = (root) => {
   const content = el('div', { class: 'content' });
   root.append(topBar(tr('General'), { back: true }), el('div', { class: 'page' }, content));
@@ -1331,8 +1785,8 @@ SCREENS.set_general = (root) => {
     // ArgusSen's own language: the app, the log and the names in Home Assistant
     const appSelect = el('select', { class: 'select', 'aria-label': tr('Language'), disabled: true });
     const langErr = el('p', { class: 'errorText', role: 'alert' });
-    content.append(el('h2', { class: 'small' }, tr('Language')), appSelect,
-      el('p', { class: 'hint' }, tr('Used for the app, the log and the entity names in Home Assistant.')), langErr);
+    content.append(el('h2', { class: 'small' }, tr('Language in Home Assistant and the log')), appSelect,
+      el('p', { class: 'hint' }, tr('The names of the entities in Home Assistant and the log – and the app\'s language on devices set to “Same as ArgusSen”.')), langErr);
     api('/api/language').then((l) => {
       const autoName = LANG_NAMES[l.auto] || l.auto;
       appSelect.append(el('option', { value: 'auto' }, l.ha ? tr('Automatic – the language of Home Assistant ({name})', { name: autoName })
@@ -1346,7 +1800,7 @@ SCREENS.set_general = (root) => {
         save('serverLanguage', l.language); save('language', 'auto'); location.reload();
       } catch (e) { langErr.textContent = e.message; appSelect.disabled = false; }
     };
-    content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Language on this device')), deviceSelect);
+    content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Language in the app on this device')), deviceSelect);
     // camera images to Home Assistant (MQTT): everybody with access to the MQTT broker can read them
     const haImg = el('div');
     content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, 'Home Assistant'), haImg);
@@ -1354,13 +1808,24 @@ SCREENS.set_general = (root) => {
       tr('A still image of each camera and the latest event are sent via MQTT. Everybody with access to the MQTT broker can see them.'), o.images,
       async (t) => { try { await api('/api/admin/ha', { method: 'PUT', body: { images: t } }); } catch (e) { alert(e.message); } }))).catch(() => {});
   } else {
-    content.append(el('h2', { class: 'small' }, tr('Language on this device')), deviceSelect);
+    content.append(el('h2', { class: 'small' }, tr('Language in the app on this device')), deviceSelect);
   }
   const opt = (camKey) => (until) => { S.opt[camKey] = until; save('opt', S.opt); };
   content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Display (this device)')),
     toggleButton(tr('Show yellow boxes on events'), tr('Frame around person, car … in images'), S.opt.boxes, opt('boxes')),
     toggleButton(tr('Show boxes in live view'), tr('Draws AI detections on top of the live video'), S.opt.liveBoxes, opt('liveBoxes')),
-    toggleButton(tr('Events in SD on mobile data'), tr('Starts faster and uses less data – tap HD for full resolution'), S.opt.mobileSD, opt('mobileSD')));
+    toggleButton(tr('Events in SD on mobile data'), tr('Starts faster and uses less data – tap HD for full resolution'), S.opt.mobileSD, opt('mobileSD')),
+    toggleButton(tr('Events as a time axis'), tr('On a PC: the events along a time axis down the middle. Off = the classic list.'), S.opt.timeAxis, opt('timeAxis')));
+  // the order of the cameras: one's own (made by moving them in the overview) or the default
+  const orderBox = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  const drawOrder = (own) => orderBox.replaceChildren(el('p', { class: 'hint' }, own ? tr('You use your own order of the cameras.')
+    : tr('Hold a camera in the overview and drag it to put the cameras in your own order (only for you).')),
+  own ? el('button', { type: 'button', class: 'btn grey', onclick: async () => {
+    try { await api('/api/me/order', { method: 'PUT', body: { ids: [] } }); drawOrder(false); fetchCameras(); } catch (e) { alert(e.message); }
+  } }, tr('Use the default order')) : null);
+  content.append(el('h2', { class: 'small', style: 'margin-top:8px' }, tr('Camera order')), orderBox);
+  drawOrder(false);
+  api('/api/me').then((m) => drawOrder(!!m.own_order)).catch(() => {});
   const errorText = el('p', { class: 'errorText', role: 'alert' });
   const oldPw = el('input', { type: 'password', autocomplete: 'current-password' });
   const fresh = el('input', { type: 'password', autocomplete: 'new-password' });
@@ -1388,6 +1853,7 @@ SCREENS.set_general = (root) => {
     el('h2', { class: 'small', style: 'margin-top:8px' }, tr('App')),
     el('p', { class: 'hint' }, tr('Version') + ' ' + (NATIVE ? NATIVE.versionName() : 'web') + (S.ha ? '' : ' · server ' + S.server.replace(/^https?:\/\//, ''))),
     el('button', { type: 'button', class: 'btn grey', onclick: () => checkVersion(true) }, tr('Check for update')));
+  cardify(content);
 };
 
 // ---------- users ----------
@@ -1488,6 +1954,7 @@ SCREENS.set_cameras = (root) => {
     const ids = CAMERA_LIST.map((c) => c.id);
     const status = el('p', { class: 'hint', role: 'status' });
     const draw = () => list.replaceChildren(el('p', { class: 'hint do' }, tr('Move the cameras up or down, and press Save.')),
+      el('p', { class: 'hint' }, tr('This is the default order – for everybody who has not moved the cameras in their own overview.')),
       ...ids.map((id, i) => {
         const c = CAMERA_LIST.find((x) => x.id === id);
         const move = (d) => { [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; draw(); };
@@ -1787,7 +2254,7 @@ SCREENS.set_cam_ha = (root, p) => {
 // Up to 3 zones and 3 areas to ignore per camera, drawn as polygons on a picture from the camera. The points are saved
 // in the camera's own orientation (0–1); a camera shown rotated 180° is turned here when drawing.
 const ZONE_COLOURS = ['#5CC8BB', '#F59A3C', '#B78CF0'];
-const IGNORE_COLOUR = '#D9483B';
+const IGNORE_COLOUR = '#D63A2C';
 function zoneSummary(zones) {
   const z = (zones || []).filter((x) => x.kind === 'zone').length, i = (zones || []).length - z;
   if (!z && !i) return tr('No zones');
@@ -2103,7 +2570,8 @@ window.addEventListener('hashchange', () => { if (S.token || S.ha) openLink(); }
 
 // As a Home Assistant app the user is already logged in to HA (ingress) – so no token is needed.
 async function haLogin() {
-  if (!WEB) return false;
+  // only in Home Assistant's sidebar (ingress) – elsewhere it would only give a refused request on every start
+  if (!WEB || !/\/api\/hassio_ingress\//.test(location.pathname)) return false;
   try {
     const r = await fetch(S.server + '/api/me', { cache: 'no-store' });
     if (!r.ok) return false;

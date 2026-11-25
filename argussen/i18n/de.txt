@@ -20,7 +20,7 @@
 19|Benutzer
 20|Passwort
 21|Server
-22|Du bleibst auf diesem Telefon angemeldet
+22|Du bleibst auf diesem Gerät angemeldet
 23|KAMERASYSTEM
 24|online
 25|Live
@@ -434,3 +434,48 @@ s62|geben Sie jeder Zone einen Namen
 s63|höchstens 3 Zonen und 3 ignorierte Bereiche pro Kamera
 s64|eine Zone muss im Bild liegen
 s65|ein Zonenname darf höchstens 30 Zeichen haben
+389|Kamera schwenken
+390|Positionen
+391|Position speichern
+392|Name der Position, z. B. Tür
+393|Noch keine gespeicherten Positionen – Kamera schwenken und Position speichern.
+394|Hoch
+395|Runter
+396|Links
+397|Rechts
+398|Hineinzoomen
+399|Herauszoomen
+400|Die Kamera lässt sich nur in der Live-Ansicht schwenken
+401|Maus: auf dem Video scrollen zum Zoomen · auf der Leiste scrollen springt 1 Minute
+402|Maus: auf dem Video scrollen zum Zoomen · auf der Leiste scrollen springt 10 Sekunden
+403|Tippen zum Öffnen · gedrückt halten zum Verschieben
+404|Reihenfolge der Kameras
+405|Du verwendest deine eigene Reihenfolge der Kameras.
+406|Standardreihenfolge verwenden
+407|Halte eine Kamera in der Übersicht gedrückt und ziehe sie, um die Kameras in deine eigene Reihenfolge zu bringen (nur für dich).
+408|Dies ist die Standardreihenfolge – für alle, die die Kameras nicht in ihrer eigenen Übersicht verschoben haben.
+409|Klicken zum Öffnen · gedrückt halten zum Verschieben
+410|Farbig = aufgezeichnet · orange = Ereignis · auf die Leiste klicken zum Spulen
+411|Orange = das Ereignis · {f} s davor und {e} s danach sind dabei · klicken zum Spulen
+412|Sprache in Home Assistant und im Protokoll
+413|Die Namen der Entitäten in Home Assistant und das Protokoll – und die Sprache der App auf Geräten mit „Wie ArgusSen“.
+414|Sprache der App auf diesem Gerät
+415|Auswählen
+416|Abbrechen
+417|{n} ausgewählt
+418|{n} Ereignisse löschen? Das kann nicht rückgängig gemacht werden.
+419|Wieder die neuesten zeigen
+420|Bis {date}
+421|Tippe auf die Ereignisse, um sie auszuwählen
+422|Bild speichern
+423|Bild gespeichert
+424|Aktualisiere die App, um Bilder zu speichern
+425|Das Bild konnte nicht gespeichert werden
+426|{d} ohne Ereignisse
+427|{h} Std. {m} Min.
+428|Ereignisse als Zeitachse
+429|Am PC: die Ereignisse entlang einer Zeitachse in der Mitte. Aus = die klassische Liste.
+s66|nur Administratoren können die gespeicherten Positionen ändern
+s67|gib der Position einen Namen (höchstens 30 Zeichen)
+s68|die Kamera kann nicht schwenken
+s69|unbekannter PTZ-Befehl

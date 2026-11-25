@@ -26,11 +26,12 @@ import (
 // API for the app. Everything under /api requires "Authorization: Bearer <token>" except /api/login.
 // Everything else answers 404 without content, so the address does not show any web page.
 type Server struct {
-	cfg  *Config
-	ev   *EventManager
-	auth *Auth
-	ctx  context.Context
-	ha   *haBridge
+	orders orderCache // each user's own camera order (userorder.go)
+	cfg    *Config
+	ev     *EventManager
+	auth   *Auth
+	ctx    context.Context
+	ha     *haBridge
 
 	storagePaused atomic.Bool // network drive with the storage is not mounted (and there is no local fallback)
 	storageLow    atomic.Bool // the disk guard could not free enough space (diskguard.go)
@@ -113,6 +114,7 @@ func (s *Server) routes() http.Handler {
 	priv.HandleFunc("GET /api/me", s.me)
 	priv.HandleFunc("POST /api/password", s.password)
 	priv.HandleFunc("GET /api/cams", s.camList)
+	priv.HandleFunc("PUT /api/me/order", s.putMyOrder)
 	priv.HandleFunc("GET /api/status", s.status)
 	priv.HandleFunc("GET /api/events", s.events)
 	priv.HandleFunc("GET /api/events/{id}/thumb.jpg", s.thumb)
@@ -120,6 +122,9 @@ func (s *Server) routes() http.Handler {
 	priv.HandleFunc("POST /api/events/{id}/keep", s.keepEvent)
 	priv.HandleFunc("DELETE /api/events/{id}", s.deleteEvent)
 	priv.HandleFunc("GET /api/cams/{cam}/snapshot.jpg", s.snapshot)
+	priv.HandleFunc("GET /api/cams/{cam}/ptz", s.getPTZ)
+	priv.HandleFunc("POST /api/cams/{cam}/ptz", s.postPTZ)
+	priv.HandleFunc("GET /api/live/{cam}/{stream}/stream.mp4", s.liveMSE)
 	priv.HandleFunc("GET /api/live/{cam}/{stream}/{file}", s.live)
 	priv.HandleFunc("GET /api/play/{cam}/{stream}", s.playlist)
 	priv.HandleFunc("GET /api/rec/{cam}/{stream}/{day}/{file}", s.recFile)
@@ -267,7 +272,8 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"user": userOf(r), "version": version, "instance": s.instanceID(), "standalone": s.cfg.Standalone})
+	writeJSON(w, map[string]any{"user": userOf(r), "version": version, "instance": s.instanceID(), "standalone": s.cfg.Standalone,
+		"own_order": len(s.userOrder(userOf(r).ID)) > 0})
 }
 
 // instanceID: a random id that stays the same for this ArgusSen (the Home Assistant integration recognises it by it).
@@ -302,7 +308,7 @@ type camInfo struct {
 func (s *Server) camList(w http.ResponseWriter, r *http.Request) {
 	out := []camInfo{}
 	admin := userOf(r).Admin // only administrators may see the home mode (it tells whether the family is home)
-	for _, id := range s.allowed(userOf(r)) {
+	for _, id := range s.orderedFor(userOf(r), s.allowed(userOf(r))) {
 		rn := s.runner(id)
 		if rn == nil {
 			continue
@@ -315,18 +321,48 @@ func (s *Server) camList(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
+// status: GET /api/status. Administrators see every camera; other users the same page for their own cameras only,
+// without the cameras' error texts (they can contain addresses) and with "events today" for their own cameras.
+// The home mode is not here (GET /api/mode, administrators only).
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
-	if !userOf(r).Admin {
-		http.NotFound(w, r)
-		return
+	u := userOf(r)
+	ids := s.camIDs()
+	if !u.Admin {
+		ids = s.allowed(u)
 	}
+	ids = s.orderedFor(u, ids)
 	out := []CamState{} // empty list (not null) when there are no cameras
-	for _, id := range s.camIDs() {
+	for _, id := range ids {
 		if rn := s.runner(id); rn != nil {
-			out = append(out, rn.State())
+			st := rn.State()
+			if !u.Admin {
+				st.MainErr, st.SubErr, st.MainVia, st.SubVia = "", "", "", ""
+			}
+			out = append(out, st)
 		}
 	}
-	writeJSON(w, map[string]any{"cameras": out, "time": time.Now(), "version": version, "system": s.sysStats()})
+	sys := s.sysStats()
+	if !u.Admin {
+		sys["events_today"] = s.eventsToday(ids)
+	}
+	writeJSON(w, map[string]any{"cameras": out, "time": time.Now(), "version": version, "system": sys})
+}
+
+// eventsToday: the number of events since midnight on these cameras.
+func (s *Server) eventsToday(ids []string) int {
+	if len(ids) == 0 {
+		return 0
+	}
+	now := time.Now().In(localTZ)
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, localTZ) // as in sysStats
+	args := []any{midnight.UnixMilli()}
+	q := strings.Repeat(",?", len(ids))[1:]
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	var n int
+	s.ev.db.QueryRow(`SELECT COUNT(*) FROM events WHERE start >= ? AND cam IN (`+q+`)`, args...).Scan(&n)
+	return n
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
@@ -376,14 +412,13 @@ func (s *Server) snapshot(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		return
 	}
-	f := c.LastFrame()
-	if f == nil || time.Since(f.At) > 30*time.Second {
-		jsonErr(w, http.StatusServiceUnavailable, "no image")
-		return
-	}
-	jpg, err := frameJPEG(f, 75)
+	jpg, err := c.Snapshot()
 	if err != nil {
 		jsonErr(w, 500, err.Error())
+		return
+	}
+	if jpg == nil {
+		jsonErr(w, http.StatusServiceUnavailable, "no image")
 		return
 	}
 	w.Header().Set("Content-Type", "image/jpeg")

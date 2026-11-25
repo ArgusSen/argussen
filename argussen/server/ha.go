@@ -312,11 +312,7 @@ func (h *haBridge) loop(ctx context.Context) {
 				if rn == nil {
 					continue
 				}
-				f := rn.LastFrame()
-				if f == nil || time.Since(f.At) > 30*time.Second {
-					continue
-				}
-				if jpg, err := frameJPEG(f, 75); err == nil {
+				if jpg, err := rn.Snapshot(); err == nil && jpg != nil {
 					h.mq.Publish(mqttBase+"/"+id+"/snapshot", jpg, false)
 				}
 			}

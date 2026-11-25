@@ -49,6 +49,10 @@ H.264 works everywhere. H.265 (HEVC, e.g. 4K Reolink cameras) is recorded as it 
 played back in browsers and apps that can decode H.265 – most newer PCs (Chrome, Edge) and phones can. If a device
 cannot, ArgusSen says so; then choose H.264 for the camera's main stream (in the camera's own app) if possible.
 
+**Live delay**: the live view is a few seconds behind. It is shortest when the camera sends a key frame every second
+(the *I-frame interval* or *GOP* in the camera's stream settings – some newer Reolink models send one only every 2–4
+seconds, which makes the live view 6–10 seconds late).
+
 Battery-powered cameras cannot record 24/7 and are not supported.
 
 ## Storage
@@ -258,6 +262,9 @@ log easier for others to read.
   digest login. Reolink's HTTPS-FLV sends the password over HTTPS without checking the camera's certificate
   (Reolink cameras use self-signed certificates), so it is the last method tried. ONVIF uses a password digest.
   Keep cameras on a network you trust (ideally a separate camera network).
+  With RTSP and HTTPS-FLV the camera's address, including its password, is on the command line of the video process
+  (ffmpeg) inside the app's container. Other apps cannot see it, unless an app has access to all of the machine's
+  processes (e.g. system monitors such as Glances) – Reolink's own protocol (bc), tried first, does not have this.
 - **Port 8099**: closed by default. If you open it (for the ArgusSen phone app), the API can be reached directly
   on your network, with ArgusSen's own login (users need a password set under Settings → Users; at most 5
   failed attempts per address and 10 per username in 15 minutes – so somebody who can reach the port can

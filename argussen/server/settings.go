@@ -232,6 +232,8 @@ func (s *Settings) GetKV(k string) string {
 	return v
 }
 
+func (s *Settings) DelKV(k string) { s.db.Exec(`DELETE FROM kv WHERE k=?`, k) }
+
 func (s *Settings) SetKV(k, v string) {
 	s.db.Exec(`INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`, k, v)
 }

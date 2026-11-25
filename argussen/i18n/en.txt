@@ -21,7 +21,7 @@
 19|User
 20|Password
 21|Server
-22|You stay logged in on this phone
+22|You stay logged in on this device
 23|CAMERA SYSTEM
 24|online
 25|Live
@@ -435,3 +435,48 @@ s62|give every zone a name
 s63|at most 3 zones and 3 areas to ignore per camera
 s64|a zone must be inside the picture
 s65|a zone name can be at most 30 characters
+389|Turn the camera
+390|Positions
+391|Save position
+392|Name of the position, e.g. Door
+393|No saved positions yet – turn the camera and save the position.
+394|Up
+395|Down
+396|Left
+397|Right
+398|Zoom in
+399|Zoom out
+400|The camera can only be turned in the live view
+401|Mouse: scroll on the video to zoom · scroll on the line to jump 1 minute
+402|Mouse: scroll on the video to zoom · scroll on the line to jump 10 seconds
+403|Tap to open · hold to move
+404|Camera order
+405|You use your own order of the cameras.
+406|Use the default order
+407|Hold a camera in the overview and drag it to put the cameras in your own order (only for you).
+408|This is the default order – for everybody who has not moved the cameras in their own overview.
+409|Click to open · hold to move
+410|Coloured = recorded · orange = event · click the line to seek
+411|Orange = the event · {f} s before and {e} s after are included · click to seek
+412|Language in Home Assistant and the log
+413|The names of the entities in Home Assistant and the log – and the app's language on devices set to “Same as ArgusSen”.
+414|Language in the app on this device
+415|Select
+416|Cancel
+417|{n} selected
+418|Delete {n} events? This cannot be undone.
+419|Show the newest again
+420|Up to {date}
+421|Tap the events to select them
+422|Save image
+423|Image saved
+424|Update the app to save images
+425|Could not save the image
+426|{d} without events
+427|{h} h {m} min
+428|Events as a time axis
+429|On a PC: the events along a time axis down the middle. Off = the classic list.
+s66|only administrators can change the saved positions
+s67|give the position a name (at most 30 characters)
+s68|the camera cannot turn
+s69|unknown PTZ command

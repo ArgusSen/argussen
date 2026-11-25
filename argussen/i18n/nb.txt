@@ -20,7 +20,7 @@
 19|Bruker
 20|Passord
 21|Server
-22|Du forblir innlogget på denne telefonen
+22|Du forblir innlogget på denne enheten
 23|KAMERASYSTEM
 24|online
 25|Live
@@ -434,3 +434,48 @@ s62|gi hver sone et navn
 s63|høyst 3 soner og 3 ignorerte områder per kamera
 s64|en sone må være innenfor bildet
 s65|et sonenavn kan være høyst 30 tegn
+389|Drei kameraet
+390|Posisjoner
+391|Lagre posisjon
+392|Navn på posisjonen, f.eks. Dør
+393|Ingen lagrede posisjoner ennå – drei kameraet og lagre posisjonen.
+394|Opp
+395|Ned
+396|Venstre
+397|Høyre
+398|Zoom inn
+399|Zoom ut
+400|Kameraet kan bare dreies i direktevisningen
+401|Mus: rull på videoen for å zoome · rull på linjen for å hoppe 1 minutt
+402|Mus: rull på videoen for å zoome · rull på linjen for å hoppe 10 sekunder
+403|Trykk for å åpne · hold inne for å flytte
+404|Rekkefølge på kameraene
+405|Du bruker din egen rekkefølge på kameraene.
+406|Bruk standardrekkefølgen
+407|Hold inne et kamera i oversikten og dra det for å sette kameraene i din egen rekkefølge (bare for deg).
+408|Dette er standardrekkefølgen – for alle som ikke har flyttet kameraene i sin egen oversikt.
+409|Klikk for å åpne · hold inne for å flytte
+410|Farget = tatt opp · oransje = hendelse · klikk på linjen for å spole
+411|Oransje = hendelsen · {f} s før og {e} s etter er med · klikk for å spole
+412|Språk i Home Assistant og loggen
+413|Navnene på entitetene i Home Assistant og loggen – og appens språk på enheter som står på «Samme som ArgusSen».
+414|Språk i appen på denne enheten
+415|Velg
+416|Avbryt
+417|{n} valgt
+418|Slette {n} hendelser? Det kan ikke angres.
+419|Vis de nyeste igjen
+420|Til og med {date}
+421|Trykk på hendelsene for å velge dem
+422|Lagre bilde
+423|Bildet er lagret
+424|Oppdater appen for å lagre bilder
+425|Bildet kunne ikke lagres
+426|{d} uten hendelser
+427|{h} t {m} min
+428|Hendelser som tidsakse
+429|På PC: hendelsene langs en tidsakse ned gjennom midten. Av = den klassiske listen.
+s66|bare administratorer kan endre de lagrede posisjonene
+s67|gi posisjonen et navn (maks. 30 tegn)
+s68|kameraet kan ikke dreies
+s69|ukjent PTZ-kommando

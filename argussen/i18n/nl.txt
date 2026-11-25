@@ -20,7 +20,7 @@
 19|Gebruiker
 20|Wachtwoord
 21|Server
-22|Je blijft ingelogd op deze telefoon
+22|Je blijft ingelogd op dit apparaat
 23|CAMERASYSTEEM
 24|online
 25|Live
@@ -434,3 +434,48 @@ s62|geef elke zone een naam
 s63|hoogstens 3 zones en 3 genegeerde gebieden per camera
 s64|een zone moet binnen het beeld liggen
 s65|een zonenaam mag hoogstens 30 tekens zijn
+389|Camera draaien
+390|Posities
+391|Positie opslaan
+392|Naam van de positie, bijv. Deur
+393|Nog geen opgeslagen posities – draai de camera en sla de positie op.
+394|Omhoog
+395|Omlaag
+396|Links
+397|Rechts
+398|Inzoomen
+399|Uitzoomen
+400|De camera kan alleen in de liveweergave worden gedraaid
+401|Muis: scroll op de video om te zoomen · scroll op de balk om 1 minuut te springen
+402|Muis: scroll op de video om te zoomen · scroll op de balk om 10 seconden te springen
+403|Tik om te openen · ingedrukt houden om te verplaatsen
+404|Volgorde van de camera's
+405|Je gebruikt je eigen volgorde van de camera's.
+406|Standaardvolgorde gebruiken
+407|Houd een camera in het overzicht ingedrukt en sleep hem om de camera's in je eigen volgorde te zetten (alleen voor jou).
+408|Dit is de standaardvolgorde – voor iedereen die de camera's niet in het eigen overzicht heeft verplaatst.
+409|Klik om te openen · ingedrukt houden om te verplaatsen
+410|Gekleurd = opgenomen · oranje = gebeurtenis · klik op de balk om te spoelen
+411|Oranje = de gebeurtenis · {f} s ervoor en {e} s erna zijn inbegrepen · klik om te spoelen
+412|Taal in Home Assistant en het logboek
+413|De namen van de entiteiten in Home Assistant en het logboek – en de taal van de app op apparaten met “Zelfde als ArgusSen”.
+414|Taal van de app op dit apparaat
+415|Selecteren
+416|Annuleren
+417|{n} geselecteerd
+418|{n} gebeurtenissen verwijderen? Dit kan niet ongedaan worden gemaakt.
+419|Weer de nieuwste tonen
+420|Tot en met {date}
+421|Tik op de gebeurtenissen om ze te selecteren
+422|Afbeelding opslaan
+423|Afbeelding opgeslagen
+424|Werk de app bij om afbeeldingen op te slaan
+425|De afbeelding kon niet worden opgeslagen
+426|{d} zonder gebeurtenissen
+427|{h} u {m} min
+428|Gebeurtenissen als tijdas
+429|Op een pc: de gebeurtenissen langs een tijdas door het midden. Uit = de klassieke lijst.
+s66|alleen beheerders kunnen de opgeslagen posities wijzigen
+s67|geef de positie een naam (hoogstens 30 tekens)
+s68|de camera kan niet draaien
+s69|onbekend PTZ-commando

@@ -163,13 +163,27 @@ func TestAccessPerCamera(t *testing.T) {
 		t.Errorf("/api/cams shows other cameras: %+v", list)
 	}
 	for _, p := range []string{"/api/cams/b/snapshot.jpg", "/api/live/b/sub/index.m3u8", "/api/rec/b/sub/20260101/000000.ts",
-		"/api/play/b/sub", "/api/timeline/b", "/api/admin/cameras", "/api/admin/users", "/api/mode", "/api/status", "/api/log"} {
+		"/api/play/b/sub", "/api/timeline/b", "/api/admin/cameras", "/api/admin/users", "/api/mode", "/api/log"} {
 		if c := do("GET", p, "", "").Code; c != 404 && c != 403 {
 			t.Errorf("%s: %d, want 403/404", p, c)
 		}
 	}
 	if c := do("GET", "/api/cams", "", "").Code; c != 200 {
 		t.Errorf("own cameras: %d", c)
+	}
+	// the Status page: only her own camera, without error texts (they can contain addresses), no home mode
+	s.runner("a").set(func(st *CamState) { st.SubErr = "rtsp://192.168.1.2: timeout" })
+	var stat struct {
+		Cameras []CamState     `json:"cameras"`
+		System  map[string]any `json:"system"`
+	}
+	w0 := do("GET", "/api/status", "", "")
+	json.Unmarshal(w0.Body.Bytes(), &stat)
+	if w0.Code != 200 || len(stat.Cameras) != 1 || stat.Cameras[0].ID != "a" || stat.Cameras[0].SubErr != "" {
+		t.Errorf("/api/status for a user: %d %+v", w0.Code, stat.Cameras)
+	}
+	if strings.Contains(w0.Body.String(), "home") || strings.Contains(w0.Body.String(), "192.168") {
+		t.Errorf("/api/status tells too much: %s", w0.Body)
 	}
 	// without a token: nothing
 	r := httptest.NewRequest("GET", "/api/cams", nil)

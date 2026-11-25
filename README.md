@@ -9,8 +9,9 @@ hardware – no cloud and no subscription.
 
 <p align="center"><a href="https://buymeacoffee.com/argussen"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="40"></a></p>
 
-> **Version 1.1** – now with **zones**, a **notification blueprint**, **device triggers** and an **"Active" switch** per
-> camera ([what's new](argussen/CHANGELOG.md)). Tested on a home installation with Reolink and D-Link cameras;
+> **Version 1.2** – a **live view a quarter of a second behind the camera**, **PTZ** with saved positions, events on a
+> **time axis**, one player with the **mouse wheel** on a PC, **your own camera order** and a lighter app
+> ([what's new](argussen/CHANGELOG.md)). Tested on a home installation with Reolink and D-Link cameras;
 > feedback and bug reports are welcome under *Issues*.
 
 <p align="center"><img src="docs/screenshots/home-assistant.jpg" alt="ArgusSen in the Home Assistant sidebar: four cameras and the latest events" width="900"></p>
@@ -35,9 +36,13 @@ hardware – no cloud and no subscription.
   download as MP4, and "protect" so it is never deleted.
 - **Zones**: up to 3 zones and 3 areas to ignore per camera, drawn on the camera picture. Events show where
   something happened ("Person · Driveway"), and areas to ignore (a road, a tree in the wind) give fewer false events.
-- **Live view and timeline** with zoom, speed from ½× to 64× and jumping between cameras. On a PC the live view
-  fills the screen and the timeline shows the day's events next to the video.
-- **Your own camera order** – drag the cameras into place in the overview.
+- **Fast live view** – about a quarter of a second behind the camera – and a **timeline** with zoom, speed from ½× to
+  16× and jumping between cameras. On a PC: one player for live, the timeline and events, the mouse wheel to zoom and
+  to jump, and the day's events next to the video.
+- **Events on a time axis** (PC) or as a list, with filters, *Pick day*, one camera at a time, and *Select* to protect
+  or delete several at once. **Save image** from any video.
+- **PTZ**: turn and zoom cameras that can (Reolink E1, ONVIF), with saved positions.
+- **Your own camera order** – every user holds a camera in the overview and drags it into place.
 - **Find cameras on the network** (ONVIF discovery and RTSP) when adding a camera.
 - **Login through Home Assistant** – no extra users or passwords. HA administrators are ArgusSen
   administrators; others can be limited to certain cameras.

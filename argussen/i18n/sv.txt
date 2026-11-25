@@ -20,7 +20,7 @@
 19|Användare
 20|Lösenord
 21|Server
-22|Du förblir inloggad på den här telefonen
+22|Du förblir inloggad på den här enheten
 23|KAMERASYSTEM
 24|online
 25|Live
@@ -434,3 +434,48 @@ s62|ge varje zon ett namn
 s63|högst 3 zoner och 3 ignorerade områden per kamera
 s64|en zon måste vara inom bilden
 s65|ett zonnamn får vara högst 30 tecken
+389|Vrid kameran
+390|Positioner
+391|Spara position
+392|Positionens namn, t.ex. Dörr
+393|Inga sparade positioner än – vrid kameran och spara positionen.
+394|Upp
+395|Ner
+396|Vänster
+397|Höger
+398|Zooma in
+399|Zooma ut
+400|Kameran kan bara vridas i livevyn
+401|Mus: scrolla på videon för att zooma · scrolla på linjen för att hoppa 1 minut
+402|Mus: scrolla på videon för att zooma · scrolla på linjen för att hoppa 10 sekunder
+403|Tryck för att öppna · håll ned för att flytta
+404|Kamerornas ordning
+405|Du använder din egen ordning av kamerorna.
+406|Använd standardordningen
+407|Håll ned en kamera i översikten och dra den för att ordna kamerorna i din egen ordning (bara för dig).
+408|Detta är standardordningen – för alla som inte har flyttat kamerorna i sin egen översikt.
+409|Klicka för att öppna · håll ned för att flytta
+410|Färgat = inspelat · orange = händelse · klicka på linjen för att spola
+411|Orange = händelsen · {f} s före och {e} s efter är med · klicka för att spola
+412|Språk i Home Assistant och loggen
+413|Namnen på entiteterna i Home Assistant och loggen – och appens språk på enheter som står på ”Samma som ArgusSen”.
+414|Språk i appen på den här enheten
+415|Välj
+416|Avbryt
+417|{n} valda
+418|Ta bort {n} händelser? Det går inte att ångra.
+419|Visa de senaste igen
+420|Till och med {date}
+421|Tryck på händelserna för att välja dem
+422|Spara bild
+423|Bilden har sparats
+424|Uppdatera appen för att spara bilder
+425|Bilden kunde inte sparas
+426|{d} utan händelser
+427|{h} tim {m} min
+428|Händelser som tidsaxel
+429|På PC: händelserna längs en tidsaxel genom mitten. Av = den klassiska listan.
+s66|endast administratörer kan ändra de sparade positionerna
+s67|ge positionen ett namn (högst 30 tecken)
+s68|kameran kan inte vridas
+s69|okänt PTZ-kommando

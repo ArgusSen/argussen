@@ -874,6 +874,7 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	forgetIngressUsers()
+	s.setUserOrder(u.ID, nil) // their own camera order goes too (an id can be used again)
 	log.Printf("User %s deleted by %s", u.Name, userOf(r).Name)
 	writeJSON(w, map[string]bool{"ok": true})
 }

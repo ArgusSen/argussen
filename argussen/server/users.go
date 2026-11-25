@@ -163,6 +163,7 @@ func userCmd(db *sql.DB, cfg *Config, args []string) error {
 			return err
 		}
 		db.Exec(`DELETE FROM sessions WHERE user_id=(SELECT id FROM users WHERE name=?)`, args[1])
+		db.Exec(`DELETE FROM kv WHERE k='order:' || (SELECT id FROM users WHERE name=?)`, args[1]) // their own camera order
 		return affected(db.Exec(`DELETE FROM users WHERE name=?`, args[1]))
 	}
 	return fmt.Errorf("%s", userHelp)

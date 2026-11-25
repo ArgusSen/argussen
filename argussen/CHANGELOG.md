@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.2.0
+
+Upgrading from 1.1.x: nothing to do – cameras, users, settings, zones and events are kept. Home Assistant asks for a
+restart afterwards, because the integration is updated.
+
+### Live view and playback
+- **Fast live view**: live video is about a quarter of a second behind the camera instead of 2–3 seconds – close to the
+  camera maker's own app. The picture is passed on as it comes (no re-encoding, no extra load); if a browser cannot use
+  it, the live view falls back to the old way by itself. Recordings, events and the Home Assistant camera entities work
+  as before.
+- **PTZ – turn the camera**: cameras that can pan and tilt (e.g. Reolink E1, other brands through ONVIF) get a *PTZ*
+  button in the live view with arrows (and zoom where the camera has it). ArgusSen stops the camera by itself if the
+  connection is lost. Administrators can save **positions** (e.g. "Door"); everybody who may see the camera can send it
+  there with one tap.
+- **One player on a PC**: an event opened from the timeline keeps the video's size and place, with the same rows under
+  it – the event's bar instead of the whole day – and the time being played at the top.
+- **Mouse wheel on a PC**: zoom on the video (around the pointer; drag to move), 1 minute per step on the timeline and
+  10 seconds on an event's bar (up = later).
+- **More compact timeline**: the camera is a menu next to the days, and *Go to live* sits beside them – nothing moves
+  when you leave the live view, and the video gets more room on a phone.
+- **Save image**: a small button by the video saves the picture shown right now as JPG (full size when HD is shown).
+- The playback speed goes up to 16× (64× is gone – browsers cannot play faster, so it only jumped in jerks).
+
+### Events
+- **A time axis on a PC**: the events as cards on both sides of one time axis (zigzag), every camera in its own colour,
+  a legend to show *All* or one camera, and long pauses written on the axis. *Settings → General → Events as a time
+  axis* switches back to the classic list (remembered per device). Phones keep the list.
+- **Pick day** shows the events up to the end of that day; **Select** marks several events to protect – or, for
+  administrators, delete – at once; a **camera menu** shows the events of one camera (and *Load older events* goes
+  further back for it).
+- When an event plays on a PC, the camera's events that day are beside it, with small pictures.
+- Pictures in the lists are fetched only when they come into sight.
+
+### For every user
+- **Your own order of the cameras**: hold a camera in the overview, drag it and let go – saved at once, for that user
+  only, on every phone and PC. The administrators' order (*Settings → Cameras → Change order*) is the default;
+  *Settings → General → Use the default order* goes back to it. Home Assistant keeps the default order.
+- **Status for everybody**: users who are not administrators see the Status page for their own cameras (the home mode
+  stays for administrators only).
+
+### Settings and look
+- Settings are **cards**: one column on a phone; on a PC two columns (General) or one centred card.
+- Clearer texts: "Language in Home Assistant and the log" and "Language in the app on this device", "click" on a PC,
+  "this device"; red and green buttons have a contrast of at least 4.5:1.
+
+### Lighter and safer
+- About 9 MB less memory per camera (motion analysis decodes the small picture with one thread – 35 → 26 MB per camera,
+  the same CPU). Still images are made once per camera and second and shared by everybody who looks (overview, Home
+  Assistant, MQTT).
+- The app fetches nothing while it is hidden (another tab, the phone in your pocket) and catches up at once when shown;
+  camera tiles out of sight are not refreshed; fewer needless requests in the background.
+- A fast live view whose connection hangs gives up its place after 20 seconds; a stop command a PTZ camera did not get
+  is sent again.
+- Documentation: the live delay and the camera's *I-frame interval* (some newer Reolink models send a key frame only
+  every 2–4 seconds – set it to 1 second for the quickest live view).
+
 ## 1.1.1
 - **H.265 (HEVC) cameras** (e.g. 4K Reolink like the RLC-820A): live view and playback in HD now work in browsers and
   apps that can decode H.265 – most newer PCs (Chrome, Edge) and phones. The video player (hls.js) is updated to 1.6.19.

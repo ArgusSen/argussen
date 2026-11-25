@@ -20,7 +20,7 @@
 19|Utilisateur
 20|Mot de passe
 21|Serveur
-22|Vous restez connecté sur ce téléphone
+22|Vous restez connecté sur cet appareil
 23|SYSTÈME DE CAMÉRAS
 24|en ligne
 25|Direct
@@ -434,3 +434,48 @@ s62|donnez un nom à chaque zone
 s63|au plus 3 zones et 3 zones ignorées par caméra
 s64|une zone doit être dans l'image
 s65|un nom de zone peut faire au plus 30 caractères
+389|Orienter la caméra
+390|Positions
+391|Enregistrer la position
+392|Nom de la position, p. ex. Porte
+393|Aucune position enregistrée – orientez la caméra et enregistrez la position.
+394|Haut
+395|Bas
+396|Gauche
+397|Droite
+398|Zoom avant
+399|Zoom arrière
+400|La caméra ne peut être orientée qu'en direct
+401|Souris : faites défiler sur la vidéo pour zoomer · sur la barre pour sauter d'1 minute
+402|Souris : faites défiler sur la vidéo pour zoomer · sur la barre pour sauter de 10 secondes
+403|Touchez pour ouvrir · maintenez pour déplacer
+404|Ordre des caméras
+405|Vous utilisez votre propre ordre des caméras.
+406|Utiliser l'ordre par défaut
+407|Maintenez une caméra dans l'aperçu et faites-la glisser pour ranger les caméras dans votre propre ordre (seulement pour vous).
+408|Ceci est l'ordre par défaut – pour tous ceux qui n'ont pas déplacé les caméras dans leur propre aperçu.
+409|Cliquez pour ouvrir · maintenez pour déplacer
+410|En couleur = enregistré · orange = événement · cliquez sur la barre pour avancer
+411|Orange = l'événement · {f} s avant et {e} s après sont inclus · cliquez pour avancer
+412|Langue dans Home Assistant et le journal
+413|Les noms des entités dans Home Assistant et le journal – et la langue de l'app sur les appareils réglés sur « Comme ArgusSen ».
+414|Langue de l'app sur cet appareil
+415|Sélectionner
+416|Annuler
+417|{n} sélectionné(s)
+418|Supprimer {n} événements ? C'est irréversible.
+419|Afficher à nouveau les plus récents
+420|Jusqu'au {date}
+421|Touchez les événements pour les sélectionner
+422|Enregistrer l'image
+423|Image enregistrée
+424|Mettez l'app à jour pour enregistrer des images
+425|Impossible d'enregistrer l'image
+426|{d} sans événement
+427|{h} h {m} min
+428|Événements sur un axe du temps
+429|Sur PC : les événements le long d'un axe du temps au milieu. Désactivé = la liste classique.
+s66|seuls les administrateurs peuvent modifier les positions enregistrées
+s67|donnez un nom à la position (30 caractères au plus)
+s68|la caméra ne peut pas être orientée
+s69|commande PTZ inconnue

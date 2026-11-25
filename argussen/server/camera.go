@@ -60,6 +60,34 @@ type CamRunner struct {
 
 	procMu sync.Mutex
 	procs  map[string]*exec.Cmd // running ffmpeg per stream
+
+	snapMu  sync.Mutex
+	snapAt  time.Time // the frame the cached still image was made from
+	snapJPG []byte
+}
+
+// snapshotMaxAge: a still image made from a frame at most this much older than the newest is used again. Every viewer of
+// the overview, Home Assistant and MQTT ask for still images; encoding one costs about 8 ms, so without this the CPU
+// grew with every open screen.
+const snapshotMaxAge = time.Second
+
+// Snapshot: the newest frame as JPEG (shared by everybody who asks within a second), or nil if there is no recent frame.
+func (r *CamRunner) Snapshot() ([]byte, error) {
+	f := r.LastFrame()
+	if f == nil || time.Since(f.At) > 30*time.Second {
+		return nil, nil
+	}
+	r.snapMu.Lock()
+	defer r.snapMu.Unlock()
+	if r.snapJPG != nil && !f.At.Before(r.snapAt) && f.At.Sub(r.snapAt) <= snapshotMaxAge {
+		return r.snapJPG, nil
+	}
+	jpg, err := frameJPEG(f, 75)
+	if err != nil {
+		return nil, err
+	}
+	r.snapAt, r.snapJPG = f.At, jpg
+	return jpg, nil
 }
 
 func (r *CamRunner) setProc(stream string, c *exec.Cmd) {
@@ -444,6 +472,29 @@ func (r *CamRunner) bcInput(ctx context.Context, stream string) (args []string, 
 	return args, pr, w, h, stop, bcErr, nil
 }
 
+// startWithMSE starts ffmpeg with the fast live view's output on file descriptor 3 (livemse.go). The returned function
+// waits until that output has been read to the end – call it after cmd.Wait.
+func (r *CamRunner) startWithMSE(cmd *exec.Cmd, stream string) (func(), error) {
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.ExtraFiles = []*os.File{pw}
+	if err := cmd.Start(); err != nil {
+		pr.Close()
+		pw.Close()
+		return nil, err
+	}
+	pw.Close() // only ffmpeg writes
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer pr.Close()
+		feedMSE(pr, mseHubFor(r.cam.ID, stream))
+	}()
+	return func() { <-done }, nil
+}
+
 func (r *CamRunner) runMain(ctx context.Context) error {
 	r.gate(ctx)
 	var args []string
@@ -461,14 +512,17 @@ func (r *CamRunner) runMain(ctx context.Context) error {
 	}
 	args = append(args, r.segmentArgs("main")...)
 	args = append(args, r.liveArgs("main")...)
+	args = append(args, mseArgs()...)
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	cmd.Env = ffmpegEnv
 	cmd.Stdin = stdin
 	ll := &lastLine{cam: r.cam}
 	cmd.Stderr = ll
-	if err := cmd.Start(); err != nil {
+	mseDone, err := r.startWithMSE(cmd, "main")
+	if err != nil {
 		return err
 	}
+	defer mseDone()
 	r.setProc("main", cmd)
 	// Watchdog: if nothing is written to the recording for 90 s, restart.
 	done := make(chan struct{})
@@ -494,7 +548,7 @@ func (r *CamRunner) runMain(ctx context.Context) error {
 			}
 		}
 	}()
-	err := cmd.Wait()
+	err = cmd.Wait()
 	close(done)
 	if bcErr != nil {
 		if e := bcErr(); e != nil {
@@ -596,8 +650,12 @@ func (r *CamRunner) runSub(ctx context.Context) error {
 		r.gate(ctx)
 		args = inputArgs(r.cam.urlFor("sub", r.proto("sub")))
 	}
+	// One decoding thread is plenty for a small picture at a few frames a second; the default (a thread per core and
+	// a picture buffer per thread) used about 10 MB more per camera for nothing.
+	args = append([]string{"-threads", "1", "-filter_threads", "1"}, args...)
 	args = append(args, r.segmentArgs("sub")...)
 	args = append(args, r.liveArgs("sub")...)
+	args = append(args, mseArgs()...)
 	args = append(args, "-map", "0:v:0", "-vf", vf, "-fps_mode", "passthrough",
 		"-pix_fmt", "yuv420p", "-f", "rawvideo", "pipe:1")
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
@@ -609,9 +667,11 @@ func (r *CamRunner) runSub(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := cmd.Start(); err != nil {
+	mseDone, err := r.startWithMSE(cmd, "sub")
+	if err != nil {
 		return err
 	}
+	defer mseDone()
 	r.setProc("sub", cmd)
 	motionDet := newMotionDetector(w, h, r.cfg.Motion, func() (float64, float64) { return r.ev.settings.Get(r.cam.ID).motion(r.cfg.Motion) })
 	zoneMasks := func() *camMasks { return r.ev.settings.masks(r.cam.ID, motionDet.bw, motionDet.bh) }

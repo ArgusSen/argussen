@@ -20,7 +20,7 @@
 19|Bruger
 20|Adgangskode
 21|Server
-22|Du forbliver logget ind på denne telefon
+22|Du forbliver logget ind på denne enhed
 23|KAMERASYSTEM
 24|online
 25|Live
@@ -125,7 +125,7 @@
 124|Netværksdrev (NAS) tilføjes i Home Assistant: Indstillinger → System → Lager → Tilføj netværkslager, med brug "Medier". Optagelserne lægges i mappen "argus" på drevet.
 125|Sprog
 126|Automatisk
-127|Visning (denne telefon)
+127|Visning (denne enhed)
 128|Vis gule bokse på hændelser
 129|Ramme om person, bil … på billeder
 130|Vis bokse i live
@@ -441,3 +441,48 @@ s62|giv hver zone et navn
 s63|højst 3 zoner og 3 områder der ignoreres pr. kamera
 s64|en zone skal være inde i billedet
 s65|et zonenavn kan højst være 30 tegn
+389|Drej kameraet
+390|Positioner
+391|Gem position
+392|Navn på positionen, fx Dør
+393|Ingen gemte positioner endnu – drej kameraet, og gem positionen.
+394|Op
+395|Ned
+396|Venstre
+397|Højre
+398|Zoom ind
+399|Zoom ud
+400|Kameraet kan kun drejes i live-visningen
+401|Mus: rul på videoen for at zoome · rul på linjen for at springe 1 minut
+402|Mus: rul på videoen for at zoome · rul på linjen for at springe 10 sekunder
+403|Tryk for at åbne · hold nede for at flytte
+404|Rækkefølge af kameraer
+405|Du bruger din egen rækkefølge af kameraerne.
+406|Brug standardrækkefølgen
+407|Hold et kamera nede i oversigten og træk det for at sætte kameraerne i din egen rækkefølge (kun for dig).
+408|Dette er standardrækkefølgen – for alle, der ikke har flyttet kameraerne i deres egen oversigt.
+409|Klik for at åbne · hold nede for at flytte
+410|Farvet = optaget · orange = hændelse · klik på linjen for at spole
+411|Orange = hændelsen · {f} s før og {e} s efter er med · klik for at spole
+412|Sprog i Home Assistant og loggen
+413|Navnene på enhederne i Home Assistant og loggen – og appens sprog på enheder, der står på “Samme som ArgusSen”.
+414|Sprog i appen på denne enhed
+415|Vælg
+416|Annullér
+417|{n} valgt
+418|Slet {n} hændelser? Det kan ikke fortrydes.
+419|Vis de nyeste igen
+420|Til og med {date}
+421|Tryk på hændelserne for at vælge dem
+422|Gem billede
+423|Billedet er gemt
+424|Opdatér appen for at gemme billeder
+425|Billedet kunne ikke gemmes
+426|{d} uden hændelser
+427|{h} t {m} min
+428|Hændelser som tidsakse
+429|På PC: hændelserne langs en tidsakse ned gennem midten. Fra = den klassiske liste.
+s66|kun administratorer kan ændre de gemte positioner
+s67|giv positionen et navn (højst 30 tegn)
+s68|kameraet kan ikke drejes
+s69|ukendt PTZ-kommando
