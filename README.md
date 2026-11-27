@@ -7,8 +7,6 @@ It records your cameras 24/7, detects people, cars, vans and bicycles with AI, a
 video, a timeline and events right in the Home Assistant sidebar. Everything stays on your own
 hardware – no cloud and no subscription.
 
-<p align="center"><a href="https://buymeacoffee.com/argussen"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="40"></a></p>
-
 > **Version 1.2** – a **live view a quarter of a second behind the camera**, **PTZ** with saved positions, events on a
 > **time axis**, one player with the **mouse wheel** on a PC, **your own camera order** and a lighter app
 > ([what's new](argussen/CHANGELOG.md)). Tested on a home installation with Reolink and D-Link cameras;
