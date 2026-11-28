@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+- A camera's new name is shown at once – in the overview, on the Status page and in Home Assistant. Before, the old
+  name stayed until ArgusSen was restarted (issue #2).
+
 ## 1.2.0
 
 Upgrading from 1.1.x: nothing to do – cameras, users, settings, zones and events are kept. Home Assistant asks for a

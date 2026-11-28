@@ -1,5 +1,5 @@
 name: ArgusSen
-version: "1.2.0"
+version: "1.2.1"
 slug: argussen
 description: ArgusSen – NVR for Home Assistant. Records and shows your surveillance cameras (Reolink, ONVIF, RTSP) – live, 24/7 and events with AI
 url: https://github.com/ArgusSen/argussen

@@ -389,6 +389,8 @@ func (s *Server) updateCam(w http.ResponseWriter, r *http.Request) {
 		s.startCam(&c)
 	} else if rn := s.runner(id); rn != nil {
 		rn.cam.Name, rn.cam.Optional, rn.cam.HAName, rn.cam.HAArea = c.Name, c.Optional, c.HAName, c.HAArea
+		// the name shown everywhere (overview, Status, Home Assistant) comes from the state – issue #2: it kept the old name
+		rn.set(func(st *CamState) { st.Name = c.Name })
 	}
 	s.haRefresh("")
 	log.Printf("Camera %s changed by %s", id, userOf(r).Name)
